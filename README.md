@@ -1,11 +1,14 @@
-# Akeeba Build Tools
-Akeeba Build Tools is an extension builder for Joomla!. It contains the common build files of the Akeeba extensions, but can also be used for building your own Joomla! extensions. Akeeba Build Tools is NOT a standalone builder, it needs an extension specific Phing build file.
+# Twentronix Build Tools
+Twentronix Build Tools is an extension builder for Joomla!. It contains the common build files of the Twentronix extensions, but can also be used for building your own Joomla! extensions. Twentronix Build Tools is NOT a standalone builder, it needs an extension specific Phing build file.
 
 Feel free to fork and contribute.
 
+## Credits
+Twentronix Build Tools is based on Akeeba Build Tools of Nicholas Dionysopoulos of <https://www.AkeebaBackup.com>. Thank you Nicholas for these awesome scripts.
+
 ## COPYRIGHT AND DISCLAIMER
-Akeeba Build Tools - Extension builder for Joomla!
-Copyright (c) 2010-2013 Akeeba Ltd
+Twentronix Build Tools - Extension builder for Joomla!
+Copyright (c) 2010-2013 Twentronix
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
