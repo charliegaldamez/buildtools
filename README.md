@@ -4,7 +4,7 @@ Twentronix Build Tools is an extension builder for Joomla!. It contains the comm
 Feel free to fork and contribute.
 
 ## Credits
-Twentronix Build Tools is based on Akeeba Build Tools of Nicholas Dionysopoulos of <https://www.AkeebaBackup.com>. Thank you Nicholas for these awesome scripts.
+Twentronix Build Tools is based on Akeeba Build Tools of Nicholas Dionysopoulos of Akeeba Backup. Thank you Nicholas for these awesome scripts.
 
 ## COPYRIGHT AND DISCLAIMER
 Twentronix Build Tools - Extension builder for Joomla!
