@@ -64,7 +64,6 @@ class DocexportTask extends matchingTask
 		// Post process some configuration arguments
 		$root = getcwd();
 
-		$this->imagefile_directory = dirname($this->docbook_file).DS.$this->imagefile_directory;
 		if(empty($this->outdir)) $this->outdir = $root;
 		$this->docimport_package = $this->outdir.DS.$this->docimport_package.'-'.$this->version.'.jpa';
 
