@@ -15,8 +15,8 @@ require_once 'pclzip.php';
  * @copyright Copyright (c)2009-2011 Nicholas K. Dionysopoulos
  * @license GNU GPL version 3 or, at your option, any later version
  */
-class ZipmeTask extends MatchingTask {
-
+class ZipmeTask extends MatchingTask
+{
     /**
      * @var PhingFile
      */
@@ -46,9 +46,11 @@ class ZipmeTask extends MatchingTask {
      * Add a new fileset.
      * @return FileSet
      */
-    public function createFileSet() {
+    public function createFileSet()
+	{
         $this->fileset = new ZipmeFileSet();
         $this->filesets[] = $this->fileset;
+
         return $this->fileset;
     }
 
@@ -56,9 +58,11 @@ class ZipmeTask extends MatchingTask {
      * Add a new fileset.
      * @return FileSet
      */
-    public function createZipmeFileSet() {
+    public function createZipmeFileSet()
+	{
         $this->fileset = new ZipmeFileSet();
         $this->filesets[] = $this->fileset;
+
         return $this->fileset;
     }
 
@@ -66,7 +70,8 @@ class ZipmeTask extends MatchingTask {
      * Set is the name/location of where to create the zip file.
      * @param PhingFile $destFile The output of the zip
      */
-    public function setDestFile(PhingFile $destFile) {
+    public function setDestFile(PhingFile $destFile)
+	{
         $this->zipFile = $destFile;
     }
 
@@ -76,7 +81,8 @@ class ZipmeTask extends MatchingTask {
      * @return void
      * @access public
      */
-    public function setIncludeEmptyDirs($bool) {
+    public function setIncludeEmptyDirs($bool)
+	{
         $this->includeEmpty = (boolean) $bool;
     }
 
@@ -84,7 +90,8 @@ class ZipmeTask extends MatchingTask {
      * This is the base directory to look in for things to zip.
      * @param PhingFile $baseDir
      */
-    public function setBasedir(PhingFile $baseDir) {
+    public function setBasedir(PhingFile $baseDir)
+	{
         $this->baseDir = $baseDir;
     }
 
@@ -95,7 +102,8 @@ class ZipmeTask extends MatchingTask {
      *
      * @return void
      */
-    public function setPrefix($prefix) {
+    public function setPrefix($prefix)
+	{
         $this->prefix = $prefix;
     }
 
@@ -103,26 +111,31 @@ class ZipmeTask extends MatchingTask {
      * do the work
      * @throws BuildException
      */
-    public function main() {
+    public function main()
+	{
+		if ($this->zipFile === null)
+		{
+			throw new BuildException("zipFile attribute must be set!", $this->getLocation());
+		}
 
-        if ($this->zipFile === null) {
-            throw new BuildException("zipFile attribute must be set!", $this->getLocation());
-        }
+		if ($this->zipFile->exists() && $this->zipFile->isDirectory())
+		{
+			throw new BuildException("zipFile is a directory!", $this->getLocation());
+		}
 
-        if ($this->zipFile->exists() && $this->zipFile->isDirectory()) {
-            throw new BuildException("zipFile is a directory!", $this->getLocation());
-        }
-
-        if ($this->zipFile->exists() && !$this->zipFile->canWrite()) {
-            throw new BuildException("Can not write to the specified zipFile!", $this->getLocation());
-        }
+		if ($this->zipFile->exists() && !$this->zipFile->canWrite())
+		{
+			throw new BuildException("Can not write to the specified zipFile!", $this->getLocation());
+		}
 
         // shouldn't need to clone, since the entries in filesets
         // themselves won't be modified -- only elements will be added
         $savedFileSets = $this->filesets;
 
-        try {
-            if (empty($this->filesets)) {
+        try
+		{
+            if (empty($this->filesets))
+			{
                 throw new BuildException("You must supply some nested filesets.",
                                          $this->getLocation());
             }
@@ -136,15 +149,16 @@ class ZipmeTask extends MatchingTask {
                 throw new Exception("PclZip::open() failed: " . $zip->errorInfo() );
             }
 
-            foreach($this->filesets as $fs) {
-
+            foreach ($this->filesets as $fs)
+			{
                 $files = $fs->getFiles($this->project, $this->includeEmpty);
 
                 $fsBasedir = (null != $this->baseDir) ? $this->baseDir :
                                     $fs->getDir($this->project);
 
                 $filesToZip = array();
-                for ($i=0, $fcount=count($files); $i < $fcount; $i++) {
+                for ($i=0, $fcount=count($files); $i < $fcount; $i++)
+				{
                     $f = new PhingFile($fsBasedir, $files[$i]);
 
                     //$filesToZip[] = realpath($f->getPath());
@@ -159,8 +173,6 @@ class ZipmeTask extends MatchingTask {
 					if(strtolower($fileBase) == '.ds_store') continue;
 					if($fileBase == 'Thumbs.db') continue;
 
-					//echo "\t\t$fileAbsolutePath\n";
-
                     $filesToZip[] = $f->getPath();
                 }
 
@@ -172,10 +184,11 @@ class ZipmeTask extends MatchingTask {
                 $zip->add($filesToZip,
                 	PCLZIP_OPT_ADD_PATH, is_null($this->prefix) ? '' : $this->prefix ,
                 	PCLZIP_OPT_REMOVE_PATH, $fsBasedir->getPath() );
-                
             }
 
-        } catch (IOException $ioe) {
+        }
+		catch (IOException $ioe)
+		{
                 $msg = "Problem creating ZIP: " . $ioe->getMessage();
                 $this->filesets = $savedFileSets;
                 throw new BuildException($msg, $ioe, $this->getLocation());
@@ -192,24 +205,26 @@ class ZipmeTask extends MatchingTask {
  * but hopefully they will be in the future.
  *
  */
-class ZipmeFileSet extends FileSet {
+class ZipmeFileSet extends FileSet
+{
 
     private $files = null;
 
     /**
      *  Get a list of files and directories specified in the fileset.
-     *  @return array a list of file and directory names, relative to
-     *    the baseDir for the project.
+	 *
+     * @return array 	A list of file and directory names, relative to
+     *    				the baseDir for the project.
      */
-    public function getFiles(Project $p, $includeEmpty = true) {
-
-        if ($this->files === null) {
-
+    public function getFiles(Project $p, $includeEmpty = true)
+	{
+        if ($this->files === null)
+		{
             $ds = $this->getDirectoryScanner($p);
             $this->files = $ds->getIncludedFiles();
 
-            if ($includeEmpty) {
-
+            if ($includeEmpty)
+			{
                 // first any empty directories that will not be implicitly added by any of the files
                 $implicitDirs = array();
                 foreach($this->files as $file) {
@@ -221,9 +236,12 @@ class ZipmeFileSet extends FileSet {
                 // we'll need to add to that list of implicit dirs any directories
                 // that contain other *directories* (and not files), since otherwise
                 // we get duplicate directories in the resulting tar
-                foreach($incDirs as $dir) {
-                    foreach($incDirs as $dircheck) {
-                        if (!empty($dir) && $dir == dirname($dircheck)) {
+                foreach ($incDirs as $dir)
+				{
+                    foreach ($incDirs as $dircheck)
+					{
+                        if (!empty($dir) && $dir == dirname($dircheck))
+						{
                             $implicitDirs[] = $dir;
                         }
                     }
@@ -234,17 +252,18 @@ class ZipmeFileSet extends FileSet {
                 // Now add any empty dirs (dirs not covered by the implicit dirs)
                 // to the files array.
 
-                foreach($incDirs as $dir) { // we cannot simply use array_diff() since we want to disregard empty/. dirs
-                    if ($dir != "" && $dir != "." && !in_array($dir, $implicitDirs)) {
-                        // it's an empty dir, so we'll add it.
+                foreach($incDirs as $dir)
+				{
+					// we cannot simply use array_diff() since we want to disregard empty/. dirs
+                    if ($dir != "" && $dir != "." && !in_array($dir, $implicitDirs))
+					{
+                        // it's an empty dir, so we'll add it
                         $this->files[] = $dir;
                     }
                 }
-            } // if $includeEmpty
-
-        } // if ($this->files===null)
+            }
+        }
 
         return $this->files;
     }
-
 }
