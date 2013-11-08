@@ -192,12 +192,12 @@ class ZipmeTask extends MatchingTask
 					else if (is_link($fileAbsolutePath))
 					{
 						// This should never happen. If it does happen it's a bug
-						die('ZipmeTask error: there\'s a bug in ZimeTask (line ' . __LINE__ . ').');
+						die('ZipmeTask error: there\'s a bug in ZipmeTask (line ' . __LINE__ . ').');
 					}
 					else
 					{
 						// This should never happen. It's not a file, dir or link
-						die('ZipmeTask error: unknown file type.');
+						die('ZipmeTask error: unknown file type. See line' . __LINE__ . '.');
 					}
 				}
 
