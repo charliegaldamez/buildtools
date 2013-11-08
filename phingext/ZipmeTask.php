@@ -151,21 +151,65 @@ class ZipmeTask extends MatchingTask
 
             foreach ($this->filesets as $fs)
 			{
-                $files = $fs->getFiles($this->project, $this->includeEmpty);
+				$files = array();
 
-                $fsBasedir = (null != $this->baseDir) ? $this->baseDir :
-                                    $fs->getDir($this->project);
+				$rawFiles = $fs->getFiles($this->project, $this->includeEmpty);
 
-                $filesToZip = array();
-                foreach ($files as $file)
+				$fsBasedir = ($this->baseDir != null) ? $this->baseDir :
+					$fs->getDir($this->project);
+
+				// $rawFiles should only contain files. However... it could also contain
+				// a link to a directory in stead of a file! In such a case the filtering of files
+				// (which should not be included in the zip package) doesn't work. Therefore we
+				// have to iterate and check every file...
+				foreach ($rawFiles as $file)
 				{
-                    $f = new PhingFile($fsBasedir, $file);
+					$f = new PhingFile($fsBasedir, $file);
 
 					$fileAbsolutePath = $f->getPath();
+
+					if (is_file($fileAbsolutePath))
+					{
+						$files[] = $fileAbsolutePath;
+					}
+					else if (is_dir($fileAbsolutePath))
+					{
+						// Say what?! The 'file' is actually a directory! Caused by symlinking
+						$dir = $fileAbsolutePath;
+
+						// Iterate over that directory to get the files and add them to $files
+						$iterator = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($dir));
+						foreach ($iterator as $fileInfo)
+						{
+							if (!$fileInfo->isFile())
+							{
+								continue;
+							}
+
+							$files[] = $fileInfo->getPathname();
+						}
+					}
+					else if (is_link($fileAbsolutePath))
+					{
+						// This should never happen. If it does happen it's a bug
+						die('ZipmeTask error: there\'s a bug in ZimeTask (line ' . __LINE__ . ').');
+					}
+					else
+					{
+						// This should never happen. It's not a file, dir or link
+						die('ZipmeTask error: unknown file type.');
+					}
+				}
+
+				// Ok, we've got the files. Let's check every file if it needs to be included
+				// in the zip package. If that's the case then add it to the zip package.
+                $filesToZip = array();
+                foreach ($files as $fileAbsolutePath)
+				{
 					$fileDir = rtrim(dirname($fileAbsolutePath), '/\\');
 					$fileBase = basename($fileAbsolutePath);
 
-					// Only use lowercase because we'll convert $fileBase to lowercase
+					// Only use lowercase for $disallowedBases because we'll convert $fileBase to lowercase
 					$disallowedBases = array('.ds_store', '.svn', '.gitignore', 'thumbs.db');
 					$fileBaseLower = strtolower($fileBase);
 					if (in_array($fileBaseLower, $disallowedBases))
