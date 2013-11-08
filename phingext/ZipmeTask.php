@@ -157,35 +157,38 @@ class ZipmeTask extends MatchingTask
                                     $fs->getDir($this->project);
 
                 $filesToZip = array();
-                for ($i=0, $fcount=count($files); $i < $fcount; $i++)
+                foreach ($files as $file)
 				{
-                    $f = new PhingFile($fsBasedir, $files[$i]);
+                    $f = new PhingFile($fsBasedir, $file);
 
-                    //$filesToZip[] = realpath($f->getPath());
 					$fileAbsolutePath = $f->getPath();
 					$fileDir = rtrim(dirname($fileAbsolutePath), '/\\');
 					$fileBase = basename($fileAbsolutePath);
 
-					if(substr($fileDir, -4) == '.svn') continue;
-					if($fileBase == '.svn') continue;
-					if(substr( rtrim($fileAbsolutePath,'/\\'), -4 ) == '.svn' ) continue;
-					if($fileBase == '.gitignore') continue;
-					if(strtolower($fileBase) == '.ds_store') continue;
-					if($fileBase == 'Thumbs.db') continue;
+					// Only use lowercase because we'll convert $fileBase to lowercase
+					$disallowedBases = array('.ds_store', '.svn', '.gitignore', 'thumbs.db');
+					$fileBaseLower = strtolower($fileBase);
+					if (in_array($fileBaseLower, $disallowedBases))
+					{
+						continue;
+					}
 
-                    $filesToZip[] = $f->getPath();
+					if (substr($fileDir, -4) == '.svn')
+					{
+						continue;
+					}
+					if (substr(rtrim($fileAbsolutePath,'/\\'), -4 ) == '.svn')
+					{
+						continue;
+					}
+
+                    $filesToZip[] = $fileAbsolutePath;
                 }
 
-                /*
-                $zip->add($filesToZip,
-                	PCLZIP_OPT_ADD_PATH, is_null($this->prefix) ? '' : $this->prefix ,
-                	PCLZIP_OPT_REMOVE_PATH, realpath($fsBasedir->getPath()) );
-                */
                 $zip->add($filesToZip,
                 	PCLZIP_OPT_ADD_PATH, is_null($this->prefix) ? '' : $this->prefix ,
                 	PCLZIP_OPT_REMOVE_PATH, $fsBasedir->getPath() );
             }
-
         }
 		catch (IOException $ioe)
 		{
