@@ -187,7 +187,8 @@ class LessCompilerTask extends Task
 
 	public function init()
 	{
-		$this->_importDir = $this->project->getBasedir();
+		// Go one level up, else we get the build directory
+		$this->_importDir = array(realpath($this->project->getBasedir()->getAbsolutePath() . '/..'));
 
 		return true;
 	}
@@ -200,7 +201,7 @@ class LessCompilerTask extends Task
 	function main()
 	{
 		$lessc = new lessc;
-		$lessc->setImportDir(array ($this->_importDir->getAbsolutePath()));
+		$lessc->setImportDir($this->_importDir);
 		$lessc->setFormatter($this->_formatter);
 		$lessc->setPreserveComments($this->_preserveComments);
 
