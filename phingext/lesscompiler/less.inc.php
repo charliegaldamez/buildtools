@@ -111,10 +111,6 @@ class lessc {
 			return array(false, "/* import disabled */");
 		}
 
-		if (isset($this->allParsedFiles[realpath($realPath)])) {
-			return array(false, null);
-		}
-
 		$this->addParsedFile($realPath);
 		$parser = $this->makeParser($realPath);
 		$root = $parser->parse(file_get_contents($realPath));
