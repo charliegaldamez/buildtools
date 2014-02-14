@@ -1,0 +1,64 @@
+<?xml version="1.0"?>
+<!--
+	Twentronix Build Tools
+	written by Jurian Even
+-->
+<project name="TwentronixShortcuts" description="Twentronix Shortcuts" default="git" >
+	<property file="./build.properties" />
+
+	<property name="dirs.root" value="." />
+	<property name="dirs.root.abs" value="${project.basedir}/.." />
+
+	<taskdef name="lesscompile" classname="phingext.LessCompileTask" />
+	<taskdef name="minify" classname="phingext.MinifyTask" />
+
+	<!--
+	====================================================================================================
+	Tasks - Build media
+	====================================================================================================
+	-->
+	<target name="media" depends="media-less, media-minify"
+					description="Build media (compile LESS, minify CSS and JS)">
+	</target>
+
+	<!--
+	====================================================================================================
+	Tasks - Compile LESS
+	====================================================================================================
+	-->
+
+	<target name="media-less" description="Compile LESS files with http://lesscss.org">
+		<echo msg="Compiling LESS files" />
+
+		<lesscompile>
+			<fileset dir="${dirs.root}/media">
+				<include name="*.less" />
+				<include name="**/*.less" />
+			</fileset>
+		</lesscompile>
+	</target>
+
+	<!--
+	====================================================================================================
+	Tasks - Minify
+	====================================================================================================
+	-->
+
+	<target name="media-minify" description="Minify CSS and JS files">
+		<echo msg="Minifying CSS and JS files" />
+
+		<minify>
+			<fileset dir="${dirs.root}/media">
+				<exclude name="**.min.css" />
+				<exclude name="**/*.min.css" />
+				<exclude name="**.min.js" />
+				<exclude name="**/*.min.js" />
+
+				<include name="**.css" />
+				<include name="**/*.css" />
+				<include name="**.js" />
+				<include name="**/*.js" />
+			</fileset>
+		</minify>
+	</target>
+</project>
