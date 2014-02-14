@@ -11,7 +11,7 @@ require_once 'phing/Task.php';
 require_once 'lesscompiler/less.inc.php';
 
 /**
- * Class LessCompilerTask
+ * Class LessCompileTask
  *
  * Compiles LESS using LESS compiler of http://lesscss.org/.
  *
@@ -32,7 +32,7 @@ require_once 'lesscompiler/less.inc.php';
  *
  * @see https://github.com/leafo/lessphp
  */
-class LessCompilerTask extends Task
+class LessCompileTask extends Task
 {
 	protected $_toDir;
 
