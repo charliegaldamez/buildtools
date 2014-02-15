@@ -49,29 +49,34 @@ class LessCompileTask extends Task
 	 * The used LESS formatter
 	 *
 	 * Possible values:
-	 * lessjs (default) — Same style used in LESS for JavaScript
-	 * compressed 		— Compresses all the unrequired whitespace
-	 * classic 			— lessphp’s original formatter
+	 * - lessjs (default) 	Same style used in LESS for JavaScript
+	 * - compressed 		Compresses all the un-required whitespace. Also removes
+	 * 						comments and uses .min.css by default.
+	 * - classic 			lessphp’s original formatter
 	 */
 	protected $formatter = 'classic';
 
 	/**
 	 * Set to true to preserve comments
+	 *
+	 * @param 	boolean
 	 */
-	protected $preserveComments = true;
+	protected $preserveComments = null;
 
 	/**
 	 * Collection of filesets
 	 * Used when linking contents of a directory
+	 *
+	 * @param	array
 	 */
 	private $filesets = array();
 
 	/**
 	 * Sets the LESS file to convert.
 	 *
-	 * @param  PhingFile  The source file. Either a string or an PhingFile object
+	 * @param  	PhingFile  The source file. Either a string or an PhingFile object
 	 */
-	function setFile(PhingFile $file)
+	public function setFile(PhingFile $file)
 	{
 		$this->file = $file;
 	}
@@ -79,9 +84,9 @@ class LessCompileTask extends Task
 	/**
 	 * Sets the PHP Storm File Watcher file.
 	 *
-	 * @param  PhingFile  The source file. Either a string or an PhingFile object
+	 * @param  	PhingFile  The source file. Either a string or an PhingFile object
 	 */
-	function setWatcherFilePath(PhingFile $file)
+	public function setWatcherFilePath(PhingFile $file)
 	{
 		$this->watcherFilePath = $file;
 	}
@@ -89,7 +94,7 @@ class LessCompileTask extends Task
 	/**
 	 * Sets the target directory
 	 *
-	 * @param PhingFile $path
+	 * @param 	PhingFile $path
 	 */
 	public function setToDir(PhingFile $path)
 	{
@@ -99,7 +104,7 @@ class LessCompileTask extends Task
 	/**
 	 * Sets the import directory
 	 *
-	 * @param PhingFile $path
+	 * @param 	PhingFile $path
 	 */
 	public function setImportDir(PhingFile $path)
 	{
@@ -109,7 +114,7 @@ class LessCompileTask extends Task
 	/**
 	 * Sets the LESS formatter
 	 *
-	 * @param $formatter
+	 * @param 	$formatter
 	 */
 	public function setFormatter($formatter)
 	{
@@ -119,7 +124,7 @@ class LessCompileTask extends Task
 	/**
 	 * Sets $preserveComments
 	 *
-	 * @param $preserveComments
+	 * @param 	$preserveComments
 	 */
 	public function setPreserveComments($preserveComments)
 	{
@@ -129,7 +134,7 @@ class LessCompileTask extends Task
 	/**
 	 * Creator for filesets
 	 *
-	 * @return FileSet
+	 * @return 	FileSet
 	 */
 	public function createFileset()
 	{
@@ -141,15 +146,53 @@ class LessCompileTask extends Task
 	/**
 	 * Gets filesets
 	 *
-	 * @return array
+	 * @return 	array
 	 */
-	public function getFilesets()
+	protected function getFilesets()
 	{
 		return $this->filesets;
 	}
 
 	/**
+	 * Gets formatter
+	 *
+	 * @return 	string
+	 */
+	protected function getFormatter()
+	{
+		return $this->formatter;
+	}
+
+	/**
+	 * Gets $preserveComments
+	 *
+	 * @return 	bool
+	 */
+	protected function getPreserveComments()
+	{
+		if ($this->preserveComments === null)
+		{
+			if ($this->getFormatter() == 'compressed')
+			{
+				$preserveComments = false;
+			}
+			else
+			{
+				$preserveComments = true;
+			}
+		}
+		else
+		{
+			$preserveComments = $this->preserveComments;
+		}
+
+		return $preserveComments;
+	}
+
+	/**
 	 * Returns the destination directory to output the CSS file to.
+	 *
+	 * @return string
 	 */
 	function getToDir()
 	{
@@ -227,12 +270,14 @@ class LessCompileTask extends Task
 	 */
 	function main()
 	{
-		require_once 'less/formatter/' . $this->formatter . '.php';
+		$formatter = $this->getFormatter();
+
+		require_once 'less/formatter/' . $formatter . '.php';
 
 		$less = new TxbtLess;
 		$less->setImportDir($this->importDir);
-		$less->setFormatter($this->formatter);
-		$less->setPreserveComments($this->preserveComments);
+		$less->setFormatter($formatter);
+		$less->setPreserveComments($this->getPreserveComments());
 
 		$map = $this->getMap();
 
@@ -289,7 +334,15 @@ class LessCompileTask extends Task
 				mkdir($targetDir, 0755);
 			}
 
-			$targetFile = $targetDir . '/' . $fileName . '.css';
+			if ($this->getFormatter() == 'compressed')
+			{
+				$targetFile = $targetDir . '/' . $fileName . '.min.css';
+			}
+			else
+			{
+				$targetFile = $targetDir . '/' . $fileName . '.css';
+			}
+
 			$less->compileFile($file, $targetFile);
 		}
 		catch (Exception $e)
