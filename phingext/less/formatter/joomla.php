@@ -1,15 +1,21 @@
 <?php
 /**
+ * @package			TwentronixBuildTools
+ * @author			Jurian Even
+ * @link			https://www.twentronix.com
+ * @copyright		Copyright (C) 2012 - 2014 Twentronix. All rights reserved.
+ * @license			GNU GPL version 3 or later <http://www.gnu.org/licenses/gpl.html>
+ */
+
+/**
+ * This class is taken verbatim from:
+ *
  * @package     FrameworkOnFramework
  * @subpackage  less
  * @copyright   Copyright (C) 2010 - 2014 Akeeba Ltd. All rights reserved.
  * @license     GNU General Public License version 2 or later; see LICENSE.txt
- */
-// Protect from unauthorized access
-defined('FOF_INCLUDED') or die;
-
-/**
- * This class is taken verbatim from:
+ *
+ * Which is taken on verbatim from:
  *
  * lessphp v0.3.9
  * http://leafo.net/lessphp
@@ -18,11 +24,8 @@ defined('FOF_INCLUDED') or die;
  *
  * Copyright 2012, Leaf Corcoran <leafot@gmail.com>
  * Licensed under MIT or GPLv3, see LICENSE
- *
- * @package  FrameworkOnFramework
- * @since    2.1
  */
-class FOFLessFormatterJoomla extends FOFLessFormatterClassic
+class TxbtLessFormatterJoomla extends TxbtLessFormatterClassic
 {
 	public $disableSingle = true;
 

@@ -1,15 +1,21 @@
 <?php
 /**
+ * @package			TwentronixBuildTools
+ * @author			Jurian Even
+ * @link			https://www.twentronix.com
+ * @copyright		Copyright (C) 2012 - 2014 Twentronix. All rights reserved.
+ * @license			GNU GPL version 3 or later <http://www.gnu.org/licenses/gpl.html>
+ */
+
+/**
+ * This class is taken verbatim from:
+ *
  * @package     FrameworkOnFramework
  * @subpackage  less
  * @copyright   Copyright (C) 2010 - 2014 Akeeba Ltd. All rights reserved.
  * @license     GNU General Public License version 2 or later; see LICENSE.txt
- */
-// Protect from unauthorized access
-defined('FOF_INCLUDED') or die;
-
-/**
- * This class is taken verbatim from:
+ *
+ * Which is taken on verbatim from:
  *
  * lessphp v0.3.9
  * http://leafo.net/lessphp
@@ -18,11 +24,8 @@ defined('FOF_INCLUDED') or die;
  *
  * Copyright 2012, Leaf Corcoran <leafot@gmail.com>
  * Licensed under MIT or GPLv3, see LICENSE
- *
- * @package  FrameworkOnFramework
- * @since    2.0
  */
-class FOFLessFormatterClassic
+class TxbtLessFormatterClassic
 {
 	public $indentChar			 = "  ";
 
@@ -34,11 +37,11 @@ class FOFLessFormatterClassic
 
 	public $selectorSeparator	 = ", ";
 
-	public $assignSeparator	 = ":";
+	public $assignSeparator	 	 = ":";
 
 	public $openSingle			 = " { ";
 
-	public $closeSingle		 = " }";
+	public $closeSingle		 	 = " }";
 
 	public $disableSingle		 = false;
 
@@ -69,8 +72,8 @@ class FOFLessFormatterClassic
 	/**
 	 * Return the code for a property
 	 *
-	 * @param   string  $name   The name of the porperty
-	 * @param   string  $value  The value of the porperty
+	 * @param   string  $name   The name of the property
+	 * @param   string  $value  The value of the property
 	 *
 	 * @return  string  The CSS code
 	 */

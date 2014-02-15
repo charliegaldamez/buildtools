@@ -8,12 +8,13 @@
  */
 
 require_once 'phing/Task.php';
-require_once 'lesscompiler/less.inc.php';
+require_once 'less/less.php';
+require_once 'less/parser/parser.php';
 
 /**
  * Class LessCompileTask
  *
- * Compiles LESS using LESS compiler of http://lesscss.org/.
+ * Compiles LESS using LESS compiler of http://leafo.net/lessphp/.
  *
  * Parameters:
  * - todir (optional)	The directory to write CSS files to. Default directory: /../css
@@ -200,10 +201,12 @@ class LessCompileTask extends Task
 	 */
 	function main()
 	{
-		$lessc = new lessc;
-		$lessc->setImportDir($this->_importDir);
-		$lessc->setFormatter($this->_formatter);
-		$lessc->setPreserveComments($this->_preserveComments);
+		require_once 'less/formatter/' . $this->_formatter . '.php';
+
+		$less = new TxbtLess;
+		$less->setImportDir($this->_importDir);
+		$less->setFormatter($this->_formatter);
+		$less->setPreserveComments($this->_preserveComments);
 
 		$map = $this->getMap();
 
@@ -230,7 +233,7 @@ class LessCompileTask extends Task
 				}
 
 				$targetFile = $targetDir . '/' . $fileName . '.css';
-				$lessc->compileFile($file, $targetFile);
+				$less->compileFile($file, $targetFile);
 			}
 			catch (Exception $e)
 			{

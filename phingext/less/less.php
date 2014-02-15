@@ -1,16 +1,21 @@
 <?php
 /**
+ * @package			TwentronixBuildTools
+ * @author			Jurian Even
+ * @link			https://www.twentronix.com
+ * @copyright		Copyright (C) 2012 - 2014 Twentronix. All rights reserved.
+ * @license			GNU GPL version 3 or later <http://www.gnu.org/licenses/gpl.html>
+ */
+
+/**
+ * This class is taken verbatim (changes marked with **Txbt** comment markers) from:
+ *
  * @package     FrameworkOnFramework
  * @subpackage  less
  * @copyright   Copyright (C) 2010 - 2014 Akeeba Ltd. All rights reserved.
  * @license     GNU General Public License version 2 or later; see LICENSE.txt
- */
-
-// Protect from unauthorized access
-defined('FOF_INCLUDED') or die;
-
-/**
- * This class is taken near verbatim (changes marked with **FOF** comment markers) from:
+ *
+ * Which is taken on verbatim from:
  *
  * lessphp v0.3.9
  * http://leafo.net/lessphp
@@ -22,11 +27,8 @@ defined('FOF_INCLUDED') or die;
  *
  * THIS IS THIRD PARTY CODE. Code comments are mostly useless placeholders to
  * stop phpcs from complaining...
- *
- * @package  FrameworkOnFramework
- * @since    2.0
  */
-class FOFLess
+class TxbtLess
 {
 	public static $VERSION = "v0.3.9";
 
@@ -66,7 +68,7 @@ class FOFLess
 	 * Set to the parser that generated the current line when compiling
 	 * so we know how to create error messages
 	 *
-	 * @var  FOFLessParser
+	 * @var  TxbtLessParser
 	 */
 	protected $sourceParser = null;
 
@@ -112,9 +114,7 @@ class FOFLess
 	 */
 	protected function fileExists($name)
 	{
-		/** FOF - BEGIN CHANGE * */
-		return FOFPlatform::getInstance()->getIntegrationObject('filesystem')->fileExists($name);
-		/** FOF - END CHANGE * */
+		return is_file($name);
 	}
 
 	/**
@@ -239,7 +239,7 @@ class FOFLess
 	 * @param   array          $props         Props
 	 * @param   stdClass       $block         Block
 	 * @param   string         $out           Out
-	 * @param   FOFLessParser  $sourceParser  Source parser
+	 * @param   TxbtLessParser  $sourceParser  Source parser
 	 * @param   string         $importDir     Import dir
 	 *
 	 * @return  void
@@ -283,7 +283,7 @@ class FOFLess
 	 *
 	 * @param   stdClass  $block  Block
 	 *
-	 * @see  FOFLess::compileProp()
+	 * @see  TxbtLess::compileProp()
 	 *
 	 * @return  void
 	 */
@@ -2815,9 +2815,9 @@ class FOFLess
 	protected function injectVariables($args)
 	{
 		$this->pushEnv();
-		/** FOF -- BEGIN CHANGE * */
-		$parser = new FOFLessParser($this, __METHOD__);
-		/** FOF -- END CHANGE * */
+		/** Txbt -- BEGIN CHANGE * */
+		$parser = new TxbtLessParser($this, __METHOD__);
+		/** Txbt -- END CHANGE * */
 		foreach ($args as $name => $strValue)
 		{
 			if ($name{0} != '@')
@@ -2922,9 +2922,7 @@ class FOFLess
 
 		if ($outFname !== null)
 		{
-			/** FOF - BEGIN CHANGE * */
-			return FOFPlatform::getInstance()->getIntegrationObject('filesystem')->fileWrite($outFname, $out);
-			/** FOF - END CHANGE * */
+			return file_put_contents($outFname, $out);
 		}
 
 		return $out;
@@ -3088,13 +3086,13 @@ class FOFLess
 	 *
 	 * @param   type  $name  X
 	 *
-	 * @return  FOFLessParser
+	 * @return  TxbtLessParser
 	 */
 	protected function makeParser($name)
 	{
-		/** FOF -- BEGIN CHANGE * */
-		$parser = new FOFLessParser($this, $name);
-		/** FOF -- END CHANGE * */
+		/** Txbt -- BEGIN CHANGE * */
+		$parser = new TxbtLessParser($this, $name);
+		/** Txbt -- END CHANGE * */
 		$parser->writeComments = $this->preserveComments;
 
 		return $parser;
@@ -3115,20 +3113,20 @@ class FOFLess
 	/**
 	 * New formatter
 	 *
-	 * @return  FOFLessFormatterLessjs
+	 * @return  TxbtLessFormatterLessjs
 	 */
 	protected function newFormatter()
 	{
-		/** FOF -- BEGIN CHANGE * */
-		$className = "FOFLessFormatterLessjs";
-		/** FOF -- END CHANGE * */
+		/** Txbt -- BEGIN CHANGE * */
+		$className = "TxbtLessFormatterLessjs";
+		/** Txbt -- END CHANGE * */
 		if (!empty($this->formatterName))
 		{
 			if (!is_string($this->formatterName))
 				return $this->formatterName;
-			/** FOF -- BEGIN CHANGE * */
-			$className = "FOFLessFormatter" . ucfirst($this->formatterName);
-			/** FOF -- END CHANGE * */
+			/** Txbt -- BEGIN CHANGE * */
+			$className = "TxbtLessFormatter" . ucfirst($this->formatterName);
+			/** Txbt -- END CHANGE * */
 		}
 
 		return new $className;

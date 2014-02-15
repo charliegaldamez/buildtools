@@ -1,15 +1,21 @@
 <?php
 /**
+ * @package			TwentronixBuildTools
+ * @author			Jurian Even
+ * @link			https://www.twentronix.com
+ * @copyright		Copyright (C) 2012 - 2014 Twentronix. All rights reserved.
+ * @license			GNU GPL version 3 or later <http://www.gnu.org/licenses/gpl.html>
+ */
+
+/**
+ * This class is taken verbatim from:
+ *
  * @package     FrameworkOnFramework
  * @subpackage  less
  * @copyright   Copyright (C) 2010 - 2014 Akeeba Ltd. All rights reserved.
  * @license     GNU General Public License version 2 or later; see LICENSE.txt
- */
-// Protect from unauthorized access
-defined('FOF_INCLUDED') or die;
-
-/**
- * This class is taken verbatim from:
+ *
+ * Which is taken on verbatim from:
  *
  * lessphp v0.3.9
  * http://leafo.net/lessphp
@@ -20,10 +26,8 @@ defined('FOF_INCLUDED') or die;
  * Licensed under MIT or GPLv3, see LICENSE
  *
  * Responsible for taking a string of LESS code and converting it into a syntax tree
- *
- * @since  2.0
  */
-class FOFLessParser
+class TxbtLessParser
 {
 	// Used to uniquely identify blocks
 	protected static $nextBlockId = 0;
@@ -95,11 +99,11 @@ class FOFLessParser
 
 		if (!self::$operatorString)
 		{
-			self::$operatorString = '(' . implode('|', array_map(array('FOFLess', 'preg_quote'), array_keys(self::$precedence))) . ')';
+			self::$operatorString = '(' . implode('|', array_map(array('TxbtLess', 'preg_quote'), array_keys(self::$precedence))) . ')';
 
-			$commentSingle = FOFLess::preg_quote(self::$commentSingle);
-			$commentMultiLeft = FOFLess::preg_quote(self::$commentMultiLeft);
-			$commentMultiRight = FOFLess::preg_quote(self::$commentMultiRight);
+			$commentSingle = TxbtLess::preg_quote(self::$commentSingle);
+			$commentMultiLeft = TxbtLess::preg_quote(self::$commentMultiLeft);
+			$commentMultiRight = TxbtLess::preg_quote(self::$commentMultiRight);
 
 			self::$commentMulti = $commentMultiLeft . '.*?' . $commentMultiRight;
 			self::$whitePattern = '/' . $commentSingle . '[^\n]*\s*|(' . self::$commentMulti . ')\s*|\s+/Ais';
@@ -410,7 +414,7 @@ class FOFLessParser
 	protected function isDirective($dirname, $directives)
 	{
 		// TODO: cache pattern in parser
-		$pattern = implode("|", array_map(array("FOFLess", "preg_quote"), $directives));
+		$pattern = implode("|", array_map(array("TxbtLess", "preg_quote"), $directives));
 		$pattern = '/^(-[a-z-]+-)?(' . $pattern . ')$/i';
 
 		return preg_match($pattern, $dirname);
@@ -458,7 +462,7 @@ class FOFLessParser
 			return false;
 		}
 
-		$exps = FOFLess::compressList($values, ' ');
+		$exps = TxbtLess::compressList($values, ' ');
 
 		return true;
 	}
@@ -608,7 +612,7 @@ class FOFLessParser
 			return false;
 		}
 
-		$value = FOFLess::compressList($values, ', ');
+		$value = TxbtLess::compressList($values, ', ');
 
 		return true;
 	}
@@ -905,7 +909,7 @@ class FOFLessParser
 		$this->eatWhiteDefault = false;
 
 		$stop = array("'", '"', "@{", $end);
-		$stop = array_map(array("FOFLess", "preg_quote"), $stop);
+		$stop = array_map(array("TxbtLess", "preg_quote"), $stop);
 
 		// $stop[] = self::$commentMulti;
 
@@ -1013,7 +1017,7 @@ class FOFLessParser
 		$content = array();
 
 		// Look for either ending delim , escape, or string interpolation
-		$patt = '([^\n]*?)(@\{|\\\\|' . FOFLess::preg_quote($delim) . ')';
+		$patt = '([^\n]*?)(@\{|\\\\|' . TxbtLess::preg_quote($delim) . ')';
 
 		$oldWhite = $this->eatWhiteDefault;
 		$this->eatWhiteDefault = false;
@@ -1827,7 +1831,7 @@ class FOFLessParser
 
 		if (!isset(self::$literalCache[$what]))
 		{
-			self::$literalCache[$what] = FOFLess::preg_quote($what);
+			self::$literalCache[$what] = TxbtLess::preg_quote($what);
 		}
 
 		return $this->match(self::$literalCache[$what], $m, $eatWhitespace);
@@ -1903,7 +1907,7 @@ class FOFLessParser
 			$validChars = $allowNewline ? "." : "[^\n]";
 		}
 
-		if (!$this->match('(' . $validChars . '*?)' . FOFLess::preg_quote($what), $m, !$until))
+		if (!$this->match('(' . $validChars . '*?)' . TxbtLess::preg_quote($what), $m, !$until))
 		{
 			return false;
 		}
