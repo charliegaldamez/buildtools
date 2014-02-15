@@ -36,24 +36,24 @@ class MinifyTask extends Task
 	 *
 	 * @var bool
 	 */
-	private $_debug = false;
+	private $debug = false;
 
 	/**
 	 * Collection of filesets
 	 * Used when linking contents of a directory
 	 */
-	private $_filesets = array();
+	private $filesets = array();
 
 	/**
-	 * Creator for _filesets
+	 * Creator for filesets
 	 *
 	 * @return FileSet
 	 */
 	public function createFileset()
 	{
-		$num = array_push($this->_filesets, new FileSet());
+		$num = array_push($this->filesets, new FileSet());
 
-		return $this->_filesets[$num-1];
+		return $this->filesets[$num-1];
 	}
 
 	/**
@@ -63,7 +63,7 @@ class MinifyTask extends Task
 	 */
 	public function getFilesets()
 	{
-		return $this->_filesets;
+		return $this->filesets;
 	}
 
 	/**
@@ -140,7 +140,7 @@ class MinifyTask extends Task
 			{
 				case 'css':
 				case 'js':
-					exec("yuicompressor ".escapeshellarg($path)." -o '.".$ext."$:.min.".$ext."' ".escapeshellarg($path)." ".($this->_debug ? '-v' : '')." --line-break 5000 --charset utf-8");
+					exec("yuicompressor ".escapeshellarg($path)." -o '.".$ext."$:.min.".$ext."' ".escapeshellarg($path)." ".($this->debug ? '-v' : '')." --line-break 5000 --charset utf-8");
 					break;
 				default:
 					throw new BuildException('Invalid file extension!');
