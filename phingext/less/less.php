@@ -17,7 +17,7 @@
  *
  * Which is taken on verbatim from:
  *
- * lessphp v0.3.9
+ * lessphp v0.4.0
  * http://leafo.net/lessphp
  *
  * LESS css compiler, adapted from http://lesscss.org
@@ -30,7 +30,7 @@
  */
 class TxbtLess
 {
-	public static $VERSION = "v0.3.9";
+	public static $VERSION = "v0.4.0";
 
 	protected static $TRUE = array("keyword", "true");
 
@@ -64,6 +64,8 @@ class TxbtLess
 
 	protected $numberPrecision = null;
 
+	protected $allParsedFiles = array();
+
 	/**
 	 * Set to the parser that generated the current line when compiling
 	 * so we know how to create error messages
@@ -73,8 +75,6 @@ class TxbtLess
 	protected $sourceParser = null;
 
 	protected $sourceLoc = null;
-
-	public static $defaultValue = array("keyword", "");
 
 	/**
 	 * Uniquely identify imports
@@ -191,6 +191,13 @@ class TxbtLess
 		{
 			return array(false, "/* import disabled */");
 		}
+
+		/** Txbt - BEGIN CHANGE * */
+		/*if (isset($this->allParsedFiles[realpath($realPath)]))
+		{
+			return array(false, null);
+		}*/
+		/** Txbt - END CHANGE * */
 
 		$this->addParsedFile($realPath);
 		$parser = $this->makeParser($realPath);
@@ -445,6 +452,38 @@ class TxbtLess
 		{
 			$this->compileProp($prop, $block, $out);
 		}
+
+		$out->lines = $this->deduplicate($out->lines);
+	}
+
+	/**
+	 * Deduplicate lines in a block. Comments are not de-duplicated. If a
+	 * duplicate rule is detected, the comments immediately preceding each
+	 * occurrence are consolidated.
+	 */
+	protected function deduplicate($lines)
+	{
+		$unique = array();
+		$comments = array();
+
+		foreach ($lines as $line)
+		{
+			if (strpos($line, '/*') === 0)
+			{
+				$comments[] = $line;
+				continue;
+			}
+
+			if (!in_array($line, $unique))
+			{
+				$unique[] = $line;
+			}
+
+			array_splice($unique, array_search($line, $unique), 0, $comments);
+			$comments = array();
+		}
+
+		return array_merge($unique, $comments);
 	}
 
 	/**
@@ -460,31 +499,43 @@ class TxbtLess
 		$vars    = array();
 		$imports = array();
 		$other   = array();
+		$stack = array();
 
 		foreach ($props as $prop)
 		{
 			switch ($prop[0])
 			{
+				case "comment":
+					$stack[] = $prop;
+					break;
 				case "assign":
+					$stack[] = $prop;
 					if (isset($prop[1][0]) && $prop[1][0] == $this->vPrefix)
 					{
-						$vars[] = $prop;
+						$vars = array_merge($vars, $stack);
 					}
 					else
 					{
-						$other[] = $prop;
+						$other = array_merge($other, $stack);
 					}
+					$stack = array();
 					break;
 				case "import":
-					$id        = self::$nextImportId++;
-					$prop[]    = $id;
-					$imports[] = $prop;
-					$other[]   = array("import_mixin", $id);
+					$id = self::$nextImportId++;
+					$prop[] = $id;
+					$stack[] = $prop;
+					$imports = array_merge($imports, $stack);
+					$other[] = array("import_mixin", $id);
+					$stack = array();
 					break;
 				default:
-					$other[] = $prop;
+					$stack[] = $prop;
+					$other = array_merge($other, $stack);
+					$stack = array();
 			}
 		}
+
+		$other = array_merge($other, $stack);
 
 		if ($split)
 		{
@@ -562,9 +613,8 @@ class TxbtLess
 	 */
 	protected function multiplyMedia($env, $childQueries = null)
 	{
-		if (is_null($env)
-			|| !empty($env->block->type)
-			&& $env->block->type != "media")
+		if (is_null($env) ||
+			!empty($env->block->type) && $env->block->type != "media")
 		{
 			return $childQueries;
 		}
@@ -734,17 +784,15 @@ class TxbtLess
 	/**
 	 * Pattern match
 	 *
-	 * @param   type  $block        X
-	 * @param   type  $callingArgs  X
+	 * @param $block
+	 * @param $orderedArgs
+	 * @param $keywordArgs
 	 *
-	 * @return  boolean
+	 * @return bool
 	 */
-	protected function patternMatch($block, $callingArgs)
-	{
-		/**
-		 * Match the guards if it has them
-		 * any one of the groups must have all its guards pass for a match
-		 */
+	protected function patternMatch($block, $orderedArgs, $keywordArgs) {
+		// Match the guards if it has them
+		// any one of the groups must have all its guards pass for a match
 		if (!empty($block->guards))
 		{
 			$groupPassed = false;
@@ -754,7 +802,7 @@ class TxbtLess
 				foreach ($guardGroup as $guard)
 				{
 					$this->pushEnv();
-					$this->zipSetArgs($block->args, $callingArgs);
+					$this->zipSetArgs($block->args, $orderedArgs, $keywordArgs);
 
 					$negate = false;
 
@@ -796,70 +844,90 @@ class TxbtLess
 			}
 		}
 
-		$numCalling = count($callingArgs);
-
 		if (empty($block->args))
 		{
-			return $block->isVararg || $numCalling == 0;
+			return $block->isVararg || empty($orderedArgs) && empty($keywordArgs);
 		}
 
-		// No args
-		$i = -1;
+		$remainingArgs = $block->args;
 
-		// Try to match by arity or by argument literal
-		foreach ($block->args as $i => $arg)
+		if ($keywordArgs)
+		{
+			$remainingArgs = array();
+
+			foreach ($block->args as $arg)
+			{
+				if ($arg[0] == "arg" && isset($keywordArgs[$arg[1]]))
+				{
+					continue;
+				}
+
+				$remainingArgs[] = $arg;
+			}
+		}
+
+		$i = -1; // no args
+		// try to match by arity or by argument literal
+		foreach ($remainingArgs as $i => $arg)
 		{
 			switch ($arg[0])
 			{
 				case "lit":
-					if (empty($callingArgs[$i]) || !$this->eq($arg[1], $callingArgs[$i]))
+					if (empty($orderedArgs[$i]) || !$this->eq($arg[1], $orderedArgs[$i]))
 					{
 						return false;
 					}
 					break;
 				case "arg":
-					// No arg and no default value
-					if (!isset($callingArgs[$i]) && !isset($arg[2]))
+					// no arg and no default value
+					if (!isset($orderedArgs[$i]) && !isset($arg[2]))
 					{
 						return false;
 					}
 					break;
 				case "rest":
-					// Rest can be empty
-					$i--;
+					$i--; // rest can be empty
 					break 2;
 			}
 		}
 
 		if ($block->isVararg)
 		{
-			// Not having enough is handled above
+			// not having enough is handled above
 			return true;
 		}
 		else
 		{
 			$numMatched = $i + 1;
 
-			// Greater than becuase default values always match
-			return $numMatched >= $numCalling;
+			// greater than because default values always match
+			return $numMatched >= count($orderedArgs);
 		}
 	}
 
 	/**
 	 * Pattern match all
 	 *
-	 * @param   type  $blocks       X
-	 * @param   type  $callingArgs  X
+	 * @param $blocks
+	 * @param $orderedArgs
+	 * @param $keywordArgs
+	 * @param array $skip
 	 *
-	 * @return  type
+	 * @return array|null
 	 */
-	protected function patternMatchAll($blocks, $callingArgs)
+	protected function patternMatchAll($blocks, $orderedArgs, $keywordArgs, $skip=array())
 	{
 		$matches = null;
 
 		foreach ($blocks as $block)
 		{
-			if ($this->patternMatch($block, $callingArgs))
+			// Skip seen blocks that don't have arguments
+			if (isset($skip[$block->id]) && !isset($block->args))
+			{
+				continue;
+			}
+
+			if ($this->patternMatch($block, $orderedArgs, $keywordArgs))
 			{
 				$matches[] = $block;
 			}
@@ -878,7 +946,7 @@ class TxbtLess
 	 *
 	 * @return  null
 	 */
-	protected function findBlocks($searchIn, $path, $args, $seen = array())
+	protected function findBlocks($searchIn, $path, $orderedArgs, $keywordArgs, $seen = array())
 	{
 		if ($searchIn == null)
 		{
@@ -891,7 +959,6 @@ class TxbtLess
 		}
 
 		$seen[$searchIn->id] = true;
-
 		$name = $path[0];
 
 		if (isset($searchIn->children[$name]))
@@ -900,8 +967,7 @@ class TxbtLess
 
 			if (count($path) == 1)
 			{
-				$matches = $this->patternMatchAll($blocks, $args);
-
+				$matches = $this->patternMatchAll($blocks, $orderedArgs, $keywordArgs, $seen);
 				if (!empty($matches))
 				{
 					// This will return all blocks that match in the closest
@@ -912,10 +978,10 @@ class TxbtLess
 			else
 			{
 				$matches = array();
-
 				foreach ($blocks as $subBlock)
 				{
-					$subMatches = $this->findBlocks($subBlock, array_slice($path, 1), $args, $seen);
+					$subMatches = $this->findBlocks($subBlock,
+						array_slice($path, 1), $orderedArgs, $keywordArgs, $seen);
 
 					if (!is_null($subMatches))
 					{
@@ -929,13 +995,12 @@ class TxbtLess
 				return count($matches) > 0 ? $matches : null;
 			}
 		}
-
 		if ($searchIn->parent === $searchIn)
 		{
 			return null;
 		}
 
-		return $this->findBlocks($searchIn->parent, $path, $args, $seen);
+		return $this->findBlocks($searchIn->parent, $path, $orderedArgs, $keywordArgs, $seen);
 	}
 
 	/**
@@ -947,46 +1012,47 @@ class TxbtLess
 	 *
 	 * @return  void
 	 */
-	protected function zipSetArgs($args, $values)
+	protected function zipSetArgs($args, $orderedValues, $keywordValues)
 	{
-		$i = 0;
 		$assignedValues = array();
+		$i = 0;
 
-		foreach ($args as $a)
+		foreach ($args as  $a)
 		{
-			if ($a[0] == "arg")
-			{
-				if ($i < count($values) && !is_null($values[$i]))
-				{
-					$value = $values[$i];
-				}
-				elseif (isset($a[2]))
-				{
+			if ($a[0] == "arg") {
+				if (isset($keywordValues[$a[1]])) {
+					// has keyword arg
+					$value = $keywordValues[$a[1]];
+				} elseif (isset($orderedValues[$i])) {
+					// has ordered arg
+					$value = $orderedValues[$i];
+					$i++;
+				} elseif (isset($a[2])) {
+					// has default value
 					$value = $a[2];
-				}
-				else
-				{
-					$value = null;
+				} else {
+					$this->throwError("Failed to assign arg " . $a[1]);
+					$value = null; // :(
 				}
 
 				$value = $this->reduce($value);
 				$this->set($a[1], $value);
 				$assignedValues[] = $value;
+			} else {
+				// a lit
+				$i++;
 			}
-
-			$i++;
 		}
 
-		// Check for a rest
+		// check for a rest
 		$last = end($args);
-
-		if ($last[0] == "rest")
-		{
-			$rest = array_slice($values, count($args) - 1);
+		if ($last[0] == "rest") {
+			$rest = array_slice($orderedValues, count($args) - 1);
 			$this->set($last[1], $this->reduce(array("list", " ", $rest)));
 		}
 
-		$this->env->arguments = $assignedValues;
+		// wow is this the only true use of PHP's + operator for arrays?
+		$this->env->arguments = $assignedValues + $orderedValues;
 	}
 
 	/**
@@ -998,23 +1064,18 @@ class TxbtLess
 	 *
 	 * @return  void
 	 */
-	protected function compileProp($prop, $block, $out)
-	{
-		// Set error position context
+	protected function compileProp($prop, $block, $out) {
+		// set error position context
 		$this->sourceLoc = isset($prop[-1]) ? $prop[-1] : -1;
 
-		switch ($prop[0])
-		{
+		switch ($prop[0]) {
 			case 'assign':
 				list(, $name, $value) = $prop;
-
-				if ($name[0] == $this->vPrefix)
-				{
+				if ($name[0] == $this->vPrefix) {
 					$this->set($name, $value);
-				}
-				else
-				{
-					$out->lines[] = $this->formatter->property($name, $this->compileValue($this->reduce($value)));
+				} else {
+					$out->lines[] = $this->formatter->property($name,
+						$this->compileValue($this->reduce($value)));
 				}
 				break;
 			case 'block':
@@ -1024,48 +1085,60 @@ class TxbtLess
 			case 'mixin':
 				list(, $path, $args, $suffix) = $prop;
 
-				$args = array_map(array($this, "reduce"), (array) $args);
-				$mixins = $this->findBlocks($block, $path, $args);
+				$orderedArgs = array();
+				$keywordArgs = array();
+				foreach ((array)$args as $arg) {
+					$argval = null;
+					switch ($arg[0]) {
+						case "arg":
+							if (!isset($arg[2])) {
+								$orderedArgs[] = $this->reduce(array("variable", $arg[1]));
+							} else {
+								$keywordArgs[$arg[1]] = $this->reduce($arg[2]);
+							}
+							break;
 
-				if ($mixins === null)
-				{
-					// Throw error here??
-					break;
+						case "lit":
+							$orderedArgs[] = $this->reduce($arg[1]);
+							break;
+						default:
+							$this->throwError("Unknown arg type: " . $arg[0]);
+					}
 				}
 
-				foreach ($mixins as $mixin)
-				{
-					$haveScope = false;
+				$mixins = $this->findBlocks($block, $path, $orderedArgs, $keywordArgs);
 
-					if (isset($mixin->parent->scope))
-					{
+				if ($mixins === null) {
+					$this->throwError("{$prop[1][0]} is undefined");
+				}
+
+				foreach ($mixins as $mixin) {
+					if ($mixin === $block && !$orderedArgs) {
+						continue;
+					}
+
+					$haveScope = false;
+					if (isset($mixin->parent->scope)) {
 						$haveScope = true;
 						$mixinParentEnv = $this->pushEnv();
 						$mixinParentEnv->storeParent = $mixin->parent->scope;
 					}
 
 					$haveArgs = false;
-
-					if (isset($mixin->args))
-					{
+					if (isset($mixin->args)) {
 						$haveArgs = true;
 						$this->pushEnv();
-						$this->zipSetArgs($mixin->args, $args);
+						$this->zipSetArgs($mixin->args, $orderedArgs, $keywordArgs);
 					}
 
 					$oldParent = $mixin->parent;
+					if ($mixin != $block) $mixin->parent = $block;
 
-					if ($mixin != $block)
-					{
-						$mixin->parent = $block;
-					}
-
-					foreach ($this->sortProps($mixin->props) as $subProp)
-					{
-						if ($suffix !== null
-							&& $subProp[0] == "assign"
-							&& is_string($subProp[1])
-							&& $subProp[1]{0} != $this->vPrefix)
+					foreach ($this->sortProps($mixin->props) as $subProp) {
+						if ($suffix !== null &&
+							$subProp[0] == "assign" &&
+							is_string($subProp[1]) &&
+							$subProp[1]{0} != $this->vPrefix)
 						{
 							$subProp[2] = array(
 								'list', ' ',
@@ -1078,15 +1151,8 @@ class TxbtLess
 
 					$mixin->parent = $oldParent;
 
-					if ($haveArgs)
-					{
-						$this->popEnv();
-					}
-
-					if ($haveScope)
-					{
-						$this->popEnv();
-					}
+					if ($haveArgs) $this->popEnv();
+					if ($haveScope) $this->popEnv();
 				}
 
 				break;
@@ -1095,7 +1161,7 @@ class TxbtLess
 				break;
 			case "directive":
 				list(, $name, $value) = $prop;
-				$out->lines[] = "@$name " . $this->compileValue($this->reduce($value)) . ';';
+				$out->lines[] = "@$name " . $this->compileValue($this->reduce($value)).';';
 				break;
 			case "comment":
 				$out->lines[] = $prop[1];
@@ -1104,28 +1170,25 @@ class TxbtLess
 				list(, $importPath, $importId) = $prop;
 				$importPath = $this->reduce($importPath);
 
-				if (!isset($this->env->imports))
-				{
+				if (!isset($this->env->imports)) {
 					$this->env->imports = array();
 				}
 
 				$result = $this->tryImport($importPath, $block, $out);
 
 				$this->env->imports[$importId] = $result === false ?
-					array(false, "@import " . $this->compileValue($importPath) . ";") :
+					array(false, "@import " . $this->compileValue($importPath).";") :
 					$result;
 
 				break;
 			case "import_mixin":
-				list(, $importId) = $prop;
+				list(,$importId) = $prop;
 				$import = $this->env->imports[$importId];
-
-				if ($import[0] === false)
-				{
-					$out->lines[] = $import[1];
-				}
-				else
-				{
+				if ($import[0] === false) {
+					if (isset($import[1])) {
+						$out->lines[] = $import[1];
+					}
+				} else {
 					list(, $bottom, $parser, $importDir) = $import;
 					$this->compileImportedProps($bottom, $block, $out, $parser, $importDir);
 				}
@@ -1233,6 +1296,60 @@ class TxbtLess
 			default:
 				// Assumed to be unit
 				$this->throwError("unknown value type: $value[0]");
+		}
+	}
+
+	protected function lib_pow($args) {
+		list($base, $exp) = $this->assertArgs($args, 2, "pow");
+		return pow($this->assertNumber($base), $this->assertNumber($exp));
+	}
+
+	protected function lib_pi() {
+		return pi();
+	}
+
+	protected function lib_mod($args) {
+		list($a, $b) = $this->assertArgs($args, 2, "mod");
+		return $this->assertNumber($a) % $this->assertNumber($b);
+	}
+
+	protected function lib_tan($num) {
+		return tan($this->assertNumber($num));
+	}
+
+	protected function lib_sin($num) {
+		return sin($this->assertNumber($num));
+	}
+
+	protected function lib_cos($num) {
+		return cos($this->assertNumber($num));
+	}
+
+	protected function lib_atan($num) {
+		$num = atan($this->assertNumber($num));
+		return array("number", $num, "rad");
+	}
+
+	protected function lib_asin($num) {
+		$num = asin($this->assertNumber($num));
+		return array("number", $num, "rad");
+	}
+
+	protected function lib_acos($num) {
+		$num = acos($this->assertNumber($num));
+		return array("number", $num, "rad");
+	}
+
+	protected function lib_sqrt($num) {
+		return sqrt($this->assertNumber($num));
+	}
+
+	protected function lib_extract($value) {
+		list($list, $idx) = $this->assertArgs($value, 2, "extract");
+		$idx = $this->assertNumber($idx);
+		// 1 indexed
+		if ($list[0] == "list" && isset($list[2][$idx - 1])) {
+			return $list[2][$idx - 1];
 		}
 	}
 
@@ -1364,6 +1481,40 @@ class TxbtLess
 	}
 
 	/**
+	 * Given an url, decide whether to output a regular link or the base64-encoded contents of the file
+	 *
+	 * @param  array  $value either an argument list (two strings) or a single string
+	 * @return string        formatted url(), either as a link or base64-encoded
+	 */
+	protected function lib_data_uri($value)
+	{
+		$mime = ($value[0] === 'list') ? $value[2][0][2] : null;
+		$url = ($value[0] === 'list') ? $value[2][1][2][0] : $value[2][0];
+
+		$fullpath = $this->findImport($url);
+
+		if($fullpath && ($fsize = filesize($fullpath)) !== false) {
+			// IE8 can't handle data uris larger than 32KB
+			if($fsize/1024 < 32) {
+				if(is_null($mime)) {
+					if(class_exists('finfo')) { // php 5.3+
+						$finfo = new finfo(FILEINFO_MIME);
+						$mime = explode('; ', $finfo->file($fullpath));
+						$mime = $mime[0];
+					} elseif(function_exists('mime_content_type')) { // PHP 5.2
+						$mime = mime_content_type($fullpath);
+					}
+				}
+
+				if(!is_null($mime)) // fallback if the mime type is still unknown
+					$url = sprintf('data:%s;base64,%s', $mime, base64_encode(file_get_contents($fullpath)));
+			}
+		}
+
+		return 'url("'.$url.'")';
+	}
+
+	/**
 	 * Utility func to unquote a string
 	 *
 	 * @param   string  $arg  Arg
@@ -1381,8 +1532,7 @@ class TxbtLess
 				{
 					return $this->lib_e($items[0]);
 				}
-
-				return self::$defaultValue;
+				$this->throwError("unrecognised input");
 
 			case "string":
 				$arg[1] = "";
@@ -1478,9 +1628,14 @@ class TxbtLess
 	 */
 	protected function lib_round($arg)
 	{
-		$value = $this->assertNumber($arg);
-
-		return array("number", round($value), $arg[2]);
+		if ($arg[0] != "list") {
+			$value = $this->assertNumber($arg);
+			return array("number", round($value), $arg[2]);
+		} else {
+			$value = $this->assertNumber($arg[2][0]);
+			$precision = $this->assertNumber($arg[2][1]);
+			return array("number", round($value, $precision), $arg[2][0][2]);
+		}
 	}
 
 	/**
@@ -1749,13 +1904,21 @@ class TxbtLess
 			$this->throwError("mix expects (color1, color2, weight)");
 		}
 
-		list($first, $second, $weight) = $args[2];
+		list($first, $second) = $args[2];
 		$first = $this->assertColor($first);
 		$second = $this->assertColor($second);
 
 		$first_a = $this->lib_alpha($first);
 		$second_a = $this->lib_alpha($second);
-		$weight = $weight[1] / 100.0;
+
+		if (isset($args[2][2]))
+		{
+			$weight = $args[2][2][1] / 100.0;
+		}
+		else
+		{
+			$weight = 0.5;
+		}
 
 		$w = $weight * 2 - 1;
 		$a = $first_a - $second_a;
@@ -1786,24 +1949,44 @@ class TxbtLess
 	 */
 	protected function lib_contrast($args)
 	{
-		if ($args[0] != 'list' || count($args[2]) < 3)
-		{
-			return array(array('color', 0, 0, 0), 0);
+		$darkColor  = array('color', 0, 0, 0);
+		$lightColor = array('color', 255, 255, 255);
+		$threshold  = 0.43;
+
+		if ( $args[0] == 'list' ) {
+			$inputColor = ( isset($args[2][0]) ) ? $this->assertColor($args[2][0])  : $lightColor;
+			$darkColor  = ( isset($args[2][1]) ) ? $this->assertColor($args[2][1])  : $darkColor;
+			$lightColor = ( isset($args[2][2]) ) ? $this->assertColor($args[2][2])  : $lightColor;
+			$threshold  = ( isset($args[2][3]) ) ? $this->assertNumber($args[2][3]) : $threshold;
+		}
+		else {
+			$inputColor  = $this->assertColor($args);
 		}
 
-		list($inputColor, $darkColor, $lightColor) = $args[2];
+		$inputColor = $this->coerceColor($inputColor);
+		$darkColor  = $this->coerceColor($darkColor);
+		$lightColor = $this->coerceColor($lightColor);
 
-		$inputColor = $this->assertColor($inputColor);
-		$darkColor = $this->assertColor($darkColor);
-		$lightColor = $this->assertColor($lightColor);
-		$hsl = $this->toHSL($inputColor);
-
-		if ($hsl[3] > 50)
-		{
-			return $darkColor;
+		//Figure out which is actually light and dark!
+		if ( $this->lib_luma($darkColor) > $this->lib_luma($lightColor) ) {
+			$t  = $lightColor;
+			$lightColor = $darkColor;
+			$darkColor  = $t;
 		}
 
-		return $lightColor;
+		$inputColor_alpha = $this->lib_alpha($inputColor);
+		if ( ( $this->lib_luma($inputColor) * $inputColor_alpha) < $threshold)
+		{
+			return $lightColor;
+		}
+
+		return $darkColor;
+	}
+
+	protected function lib_luma($color)
+	{
+		$color = $this->coerceColor($color);
+		return (0.2126 * $color[0] / 255) + (0.7152 * $color[1] / 255) + (0.0722 * $color[2] / 255);
 	}
 
 	/**
@@ -1842,6 +2025,26 @@ class TxbtLess
 		}
 
 		$this->throwError($error);
+	}
+
+	public function assertArgs($value, $expectedArgs, $name="")
+	{
+		if ($expectedArgs == 1) {
+			return $value;
+		} else {
+			if ($value[0] !== "list" || $value[1] != ",") $this->throwError("expecting list");
+			$values = $value[2];
+			$numValues = count($values);
+			if ($expectedArgs != $numValues) {
+				if ($name) {
+					$name = $name . ": ";
+				}
+
+				$this->throwError("${name}expecting $expectedArgs arguments, got $numValues");
+			}
+
+			return $values;
+		}
 	}
 
 	/**
@@ -2134,6 +2337,11 @@ class TxbtLess
 				$var     = $this->compileValue($reduced);
 				$res     = $this->reduce(array("variable", $this->vPrefix . $var));
 
+				if ($res[0] == "raw_color")
+				{
+					$res = $this->coerceColor($res);
+				}
+
 				if (empty($value[2]))
 				{
 					$res = $this->lib_e($res);
@@ -2156,7 +2364,7 @@ class TxbtLess
 				}
 
 				$seen[$key] = true;
-				$out = $this->reduce($this->get($key, self::$defaultValue));
+				$out = $this->reduce($this->get($key));
 				$seen[$key] = false;
 
 				return $out;
@@ -2205,7 +2413,7 @@ class TxbtLess
 				}
 
 				$f = isset($this->libFunctions[$name]) ?
-					$this->libFunctions[$name] : array($this, 'lib_' . $name);
+					$this->libFunctions[$name] : array($this, 'lib_'.str_replace('-', '_', $name));
 
 				if (is_callable($f))
 				{
@@ -2772,11 +2980,10 @@ class TxbtLess
 	 * Get the highest occurrence entry for a name
 	 *
 	 * @param   type  $name     X
-	 * @param   type  $default  X
 	 *
-	 * @return  type
+	 * @return array
 	 */
-	protected function get($name, $default = null)
+	protected function get($name)
 	{
 		$current = $this->env;
 
@@ -2800,7 +3007,7 @@ class TxbtLess
 			}
 		}
 
-		return $default;
+		$this->throwError("variable $name is undefined");
 	}
 
 	/**
@@ -2913,7 +3120,6 @@ class TxbtLess
 		$this->importDir = (array) $this->importDir;
 		$this->importDir[] = $pi['dirname'] . '/';
 
-		$this->allParsedFiles = array();
 		$this->addParsedFile($fname);
 
 		$out = $this->compile(file_get_contents($fname), $fname);
@@ -3120,10 +3326,14 @@ class TxbtLess
 		/** Txbt -- BEGIN CHANGE * */
 		$className = "TxbtLessFormatterLessjs";
 		/** Txbt -- END CHANGE * */
+
 		if (!empty($this->formatterName))
 		{
 			if (!is_string($this->formatterName))
+			{
 				return $this->formatterName;
+			}
+
 			/** Txbt -- BEGIN CHANGE * */
 			$className = "TxbtLessFormatter" . ucfirst($this->formatterName);
 			/** Txbt -- END CHANGE * */

@@ -17,7 +17,7 @@
  *
  * Which is taken on verbatim from:
  *
- * lessphp v0.3.9
+ * lessphp v0.4.0
  * http://leafo.net/lessphp
  *
  * LESS css compiler, adapted from http://lesscss.org
@@ -61,7 +61,7 @@ class TxbtLessParser
 	// These properties will supress division unless it's inside parenthases
 	protected static $supressDivisionProps = array('/border-radius$/i', '/^font$/i');
 
-	protected $blockDirectives = array("font-face", "keyframes", "page", "-moz-document");
+	protected $blockDirectives = array("font-face", "keyframes", "page", "-moz-document", "viewport", "-moz-viewport", "-o-viewport", "-ms-viewport");
 
 	protected $lineDirectives = array("charset");
 
@@ -139,7 +139,6 @@ class TxbtLessParser
 		$this->whitespace();
 
 		// Parse the entire file
-		$lastCount = $this->count;
 		while (false !== $this->parseChunk());
 
 		if ($this->count != strlen($this->buffer))
@@ -148,7 +147,7 @@ class TxbtLessParser
 		}
 
 		// TODO report where the block was opened
-		if (!is_null($this->env->parent))
+		if (!property_exists($this->env, 'parent') || !is_null($this->env->parent))
 		{
 			throw new exception('parse error: unclosed block');
 		}
@@ -202,6 +201,11 @@ class TxbtLessParser
 		}
 
 		$s = $this->seek();
+
+		if ($this->whitespace())
+		{
+			return true;
+		}
 
 		// Setting a property
 		if ($this->keyword($key) && $this->assign()
@@ -378,10 +382,9 @@ class TxbtLessParser
 		}
 
 		// Mixin
-		if ($this->mixinTags($tags)
-			&& ($this->argumentValues($argv) || true)
-			&& ($this->keyword($suffix) || true)
-			&& $this->end())
+		if ($this->mixinTags($tags) &&
+			($this->argumentDef($argv, $isVararg) || true) &&
+			($this->keyword($suffix) || true) && $this->end())
 		{
 			$tags = $this->fixTags($tags);
 			$this->append(array('mixin', $tags, $argv, $suffix), $s);
@@ -414,7 +417,9 @@ class TxbtLessParser
 	protected function isDirective($dirname, $directives)
 	{
 		// TODO: cache pattern in parser
+		/** Txbt - BEGIN CHANGE * */
 		$pattern = implode("|", array_map(array("TxbtLess", "preg_quote"), $directives));
+		/** Txbt - END CHANGE * */
 		$pattern = '/^(-[a-z-]+-)?(' . $pattern . ')$/i';
 
 		return preg_match($pattern, $dirname);
@@ -756,8 +761,6 @@ class TxbtLessParser
 	 */
 	protected function import(&$out)
 	{
-		$s = $this->seek();
-
 		if (!$this->literal('@import'))
 		{
 			return false;
@@ -909,7 +912,10 @@ class TxbtLessParser
 		$this->eatWhiteDefault = false;
 
 		$stop = array("'", '"', "@{", $end);
+
+		/** Txbt - BEGIN CHANGE * */
 		$stop = array_map(array("TxbtLess", "preg_quote"), $stop);
+		/** Txbt - END CHANGE * */
 
 		// $stop[] = self::$commentMulti;
 
@@ -964,9 +970,8 @@ class TxbtLessParser
 				continue;
 			}
 
-			if (in_array($tok, $rejectStrs))
+			if (!empty($rejectStrs) && in_array($tok, $rejectStrs))
 			{
-				$count = null;
 				break;
 			}
 
@@ -977,7 +982,9 @@ class TxbtLessParser
 		$this->eatWhiteDefault = $oldWhite;
 
 		if (count($content) == 0)
+		{
 			return false;
+		}
 
 		// Trim the end
 		if (is_string(end($content)))
@@ -1017,7 +1024,9 @@ class TxbtLessParser
 		$content = array();
 
 		// Look for either ending delim , escape, or string interpolation
+		/** Txbt - BEGIN CHANGE * */
 		$patt = '([^\n]*?)(@\{|\\\\|' . TxbtLess::preg_quote($delim) . ')';
+		/** Txbt - END CHANGE * */
 
 		$oldWhite = $this->eatWhiteDefault;
 		$this->eatWhiteDefault = false;
@@ -1164,77 +1173,24 @@ class TxbtLessParser
 	}
 
 	/**
-	 * Consume a list of property values delimited by ; and wrapped in ()
-	 *
-	 * @param   [type]  &$args  [description]
-	 * @param   [type]  $delim  [description]
-	 *
-	 * @return  boolean
-	 */
-	protected function argumentValues(&$args, $delim = ',')
-	{
-		$s = $this->seek();
-
-		if (!$this->literal('('))
-		{
-			return false;
-		}
-
-		$values = array();
-
-		while (true)
-		{
-			if ($this->expressionList($value))
-			{
-				$values[] = $value;
-			}
-
-			if (!$this->literal($delim))
-			{
-				break;
-			}
-			else
-			{
-				if ($value == null)
-				{
-					$values[] = null;
-				}
-
-				$value = null;
-			}
-		}
-
-		if (!$this->literal(')'))
-		{
-			$this->seek($s);
-
-			return false;
-		}
-
-		$args = $values;
-
-		return true;
-	}
-
-	/**
 	 * Consume an argument definition list surrounded by ()
 	 * each argument is a variable name with optional value
 	 * or at the end a ... or a variable named followed by ...
 	 *
 	 * @param   [type]  &$args      [description]
 	 * @param   [type]  &$isVararg  [description]
-	 * @param   [type]  $delim      [description]
 	 *
 	 * @return  boolean
 	 */
-	protected function argumentDef(&$args, &$isVararg, $delim = ',')
+	protected function argumentDef(&$args, &$isVararg)
 	{
 		$s = $this->seek();
 		if (!$this->literal('('))
 			return false;
 
 		$values = array();
-
+		$delim = ",";
+		$method = "expressionList";
 		$isVararg = false;
 
 		while (true)
@@ -1245,51 +1201,81 @@ class TxbtLessParser
 				break;
 			}
 
-			if ($this->variable($vname))
-			{
-				$arg = array("arg", $vname);
-				$ss = $this->seek();
+			if ($this->$method($value)) {
+				if ($value[0] == "variable") {
+					$arg = array("arg", $value[1]);
+					$ss = $this->seek();
 
-				if ($this->assign() && $this->expressionList($value))
-				{
-					$arg[] = $value;
-				}
-				else
-				{
-					$this->seek($ss);
-
-					if ($this->literal("..."))
-					{
-						$arg[0] = "rest";
-						$isVararg = true;
+					if ($this->assign() && $this->$method($rhs)) {
+						$arg[] = $rhs;
+					} else {
+						$this->seek($ss);
+						if ($this->literal("...")) {
+							$arg[0] = "rest";
+							$isVararg = true;
+						}
 					}
+
+					$values[] = $arg;
+					if ($isVararg) break;
+					continue;
+				} else {
+					$values[] = array("lit", $value);
 				}
+			}
 
-				$values[] = $arg;
 
-				if ($isVararg)
-				{
+			if (!$this->literal($delim)) {
+				if ($delim == "," && $this->literal(";")) {
+					// found new delim, convert existing args
+					$delim = ";";
+					$method = "propertyValue";
+
+					// transform arg list
+					if (isset($values[1])) { // 2 items
+						$newList = array();
+						foreach ($values as $i => $arg) {
+							switch($arg[0]) {
+								case "arg":
+									if ($i) {
+										$this->throwError("Cannot mix ; and , as delimiter types");
+									}
+									$newList[] = $arg[2];
+									break;
+								case "lit":
+									$newList[] = $arg[1];
+									break;
+								case "rest":
+									$this->throwError("Unexpected rest before semicolon");
+							}
+						}
+
+						$newList = array("list", ", ", $newList);
+
+						switch ($values[0][0]) {
+							case "arg":
+								$newArg = array("arg", $values[0][1], $newList);
+								break;
+							case "lit":
+								$newArg = array("lit", $newList);
+								break;
+						}
+
+					} elseif ($values) { // 1 item
+						$newArg = $values[0];
+					}
+
+					if ($newArg) {
+						$values = array($newArg);
+					}
+				} else {
 					break;
 				}
-
-				continue;
-			}
-
-			if ($this->value($literal))
-			{
-				$values[] = array("lit", $literal);
-			}
-
-			if (!$this->literal($delim))
-			{
-				break;
 			}
 		}
 
-		if (!$this->literal(')'))
-		{
+		if (!$this->literal(')')) {
 			$this->seek($s);
-
 			return false;
 		}
 
@@ -1340,7 +1326,6 @@ class TxbtLessParser
 	 */
 	protected function mixinTags(&$tags)
 	{
-		$s = $this->seek();
 		$tags = array();
 
 		while ($this->tag($tt, true))
@@ -1360,61 +1345,78 @@ class TxbtLessParser
 	/**
 	 * A bracketed value (contained within in a tag definition)
 	 *
-	 * @param   [type]  &$value  [description]
+	 * @param $parts
+	 * @param $hasExpression
 	 *
-	 * @return  boolean
+	 * @return bool
 	 */
-	protected function tagBracket(&$value)
+	protected function tagBracket(&$parts, &$hasExpression)
 	{
-		// Speed shortcut
-		if (isset($this->buffer[$this->count]) && $this->buffer[$this->count] != "[")
-		{
+		// speed shortcut
+		if (isset($this->buffer[$this->count]) && $this->buffer[$this->count] != "[") {
 			return false;
 		}
 
 		$s = $this->seek();
 
-		if ($this->literal('[') && $this->to(']', $c, true) && $this->literal(']', false))
-		{
-			$value = '[' . $c . ']';
+		$hasInterpolation = false;
 
-			// Whitespace?
-			if ($this->whitespace())
-			{
-				$value .= " ";
+		if ($this->literal("[", false)) {
+			$attrParts = array("[");
+			// keyword, string, operator
+			while (true) {
+				if ($this->literal("]", false)) {
+					$this->count--;
+					break; // get out early
+				}
+
+				if ($this->match('\s+', $m)) {
+					$attrParts[] = " ";
+					continue;
+				}
+				if ($this->string($str)) {
+					// escape parent selector, (yuck)
+					foreach ($str[2] as &$chunk) {
+						$chunk = str_replace($this->lessc->parentSelector, "$&$", $chunk);
+					}
+
+					$attrParts[] = $str;
+					$hasInterpolation = true;
+					continue;
+				}
+
+				if ($this->keyword($word)) {
+					$attrParts[] = $word;
+					continue;
+				}
+
+				if ($this->interpolation($inter, false)) {
+					$attrParts[] = $inter;
+					$hasInterpolation = true;
+					continue;
+				}
+
+				// operator, handles attr namespace too
+				if ($this->match('[|-~\$\*\^=]+', $m)) {
+					$attrParts[] = $m[0];
+					continue;
+				}
+
+				break;
 			}
 
-			// Escape parent selector, (yuck)
-			$value = str_replace($this->lessc->parentSelector, "$&$", $value);
-
-			return true;
+			if ($this->literal("]", false)) {
+				$attrParts[] = "]";
+				foreach ($attrParts as $part) {
+					$parts[] = $part;
+				}
+				$hasExpression = $hasExpression || $hasInterpolation;
+				return true;
+			}
+			$this->seek($s);
 		}
 
 		$this->seek($s);
-
-		return false;
-	}
-
-	/**
-	 * [tagExpression description]
-	 *
-	 * @param   [type]  &$value  [description]
-	 *
-	 * @return  boolean
-	 */
-	protected function tagExpression(&$value)
-	{
-		$s = $this->seek();
-
-		if ($this->literal("(") && $this->expression($exp) && $this->literal(")"))
-		{
-			$value = array('exp', $exp);
-
-			return true;
-		}
-
-		$this->seek($s);
-
 		return false;
 	}
 
@@ -1439,66 +1441,38 @@ class TxbtLessParser
 
 		$s = $this->seek();
 
-		if (!$simple && $this->tagExpression($tag))
-		{
-			return true;
-		}
-
 		$hasExpression = false;
-		$parts         = array();
-
-		while ($this->tagBracket($first))
-		{
-			$parts[] = $first;
-		}
+		$parts = array();
+		while ($this->tagBracket($parts, $hasExpression));
 
 		$oldWhite = $this->eatWhiteDefault;
 
 		$this->eatWhiteDefault = false;
 
-		while (true)
-		{
-			if ($this->match('([' . $chars . '0-9][' . $chars . ']*)', $m))
-			{
+		while (true) {
+			if ($this->match('(['.$chars.'0-9]['.$chars.']*)', $m)) {
 				$parts[] = $m[1];
+				if ($simple) break;
 
-				if ($simple)
-				{
-					break;
-				}
-
-				while ($this->tagBracket($brack))
-				{
-					$parts[] = $brack;
-				}
-
+				while ($this->tagBracket($parts, $hasExpression));
 				continue;
 			}
 
-			if (isset($this->buffer[$this->count]) && $this->buffer[$this->count] == "@")
-			{
-				if ($this->interpolation($interp))
-				{
+			if (isset($this->buffer[$this->count]) && $this->buffer[$this->count] == "@") {
+				if ($this->interpolation($interp)) {
 					$hasExpression = true;
-
-					// Don't unescape
-					$interp[2] = true;
+					$interp[2] = true; // don't unescape
 					$parts[] = $interp;
-
 					continue;
 				}
 
-				if ($this->literal("@"))
-				{
+				if ($this->literal("@")) {
 					$parts[] = "@";
-
 					continue;
 				}
 			}
 
-			// For keyframes
-			if ($this->unit($unit))
-			{
+			if ($this->unit($unit)) { // for keyframes
 				$parts[] = $unit[1];
 				$parts[] = $unit[2];
 				continue;
@@ -1508,20 +1482,14 @@ class TxbtLessParser
 		}
 
 		$this->eatWhiteDefault = $oldWhite;
-
-		if (!$parts)
-		{
+		if (!$parts) {
 			$this->seek($s);
-
 			return false;
 		}
 
-		if ($hasExpression)
-		{
+		if ($hasExpression) {
 			$tag = array("exp", array("string", "", $parts));
-		}
-		else
-		{
+		} else {
 			$tag = trim(implode($parts));
 		}
 
@@ -1831,7 +1799,9 @@ class TxbtLessParser
 
 		if (!isset(self::$literalCache[$what]))
 		{
+			/** Txbt - BEGIN CHANGE * */
 			self::$literalCache[$what] = TxbtLess::preg_quote($what);
+			/** Txbt - END CHANGE * */
 		}
 
 		return $this->match(self::$literalCache[$what], $m, $eatWhitespace);
@@ -1907,7 +1877,9 @@ class TxbtLessParser
 			$validChars = $allowNewline ? "." : "[^\n]";
 		}
 
+		/** Txbt - BEGIN CHANGE * */
 		if (!$this->match('(' . $validChars . '*?)' . TxbtLess::preg_quote($what), $m, !$until))
+		/** Txbt - END CHANGE * */
 		{
 			return false;
 		}
@@ -1969,10 +1941,10 @@ class TxbtLessParser
 
 			while (preg_match(self::$whitePattern, $this->buffer, $m, null, $this->count))
 			{
-				if (isset($m[1]) && empty($this->commentsSeen[$this->count]))
+				if (isset($m[1]) && empty($this->seenComments[$this->count]))
 				{
 					$this->append(array("comment", $m[1]));
-					$this->commentsSeen[$this->count] = true;
+					$this->seenComments[$this->count] = true;
 				}
 
 				$this->count += strlen($m[0]);
@@ -2174,7 +2146,9 @@ class TxbtLessParser
 			}
 
 			if (is_null($min))
+			{
 				break;
+			}
 
 			$count = $min[1];
 			$skip = 0;
@@ -2192,8 +2166,7 @@ class TxbtLessParser
 					break;
 				case '"':
 				case "'":
-
-					if (preg_match('/' . $min[0] . '.*?' . $min[0] . '/', $text, $m, 0, $count))
+					if (preg_match('/'.$min[0].'.*?(?<!\\\\)'.$min[0].'/', $text, $m, 0, $count))
 					{
 						$count += strlen($m[0]) - 1;
 					}
@@ -2213,7 +2186,6 @@ class TxbtLessParser
 
 					break;
 				case '/*':
-
 					if (preg_match('/\/\*.*?\*\//s', $text, $m, 0, $count))
 					{
 						$skip = strlen($m[0]);
