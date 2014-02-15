@@ -39,6 +39,8 @@ class LessCompileTask extends Task
 {
 	protected $file = null;
 
+	protected $watcherFilePath = null;
+
 	protected $toDir;
 
 	protected $importDir;
@@ -72,6 +74,16 @@ class LessCompileTask extends Task
 	function setFile(PhingFile $file)
 	{
 		$this->file = $file;
+	}
+
+	/**
+	 * Sets the PHP Storm File Watcher file.
+	 *
+	 * @param  PhingFile  The source file. Either a string or an PhingFile object
+	 */
+	function setWatcherFilePath(PhingFile $file)
+	{
+		$this->watcherFilePath = $file;
 	}
 
 	/**
@@ -222,17 +234,27 @@ class LessCompileTask extends Task
 		$less->setFormatter($this->formatter);
 		$less->setPreserveComments($this->preserveComments);
 
-		if ($this->file !== null && $this->file->exists())
+		$map = $this->getMap();
+
+		if (is_file($this->watcherFilePath))
 		{
-			$this->compileFile($less, $this->file);
+			if (in_array($this->watcherFilePath, $map))
+			{
+				$this->compileFile($less, $this->watcherFilePath);
+			}
 		}
 		else
 		{
-			$map = $this->getMap();
-
-			foreach ($map as $file)
+			if (is_file($this->file))
 			{
-				$this->compileFile($less, $file);
+				$this->compileFile($less, $this->file);
+			}
+			else
+			{
+				foreach ($map as $file)
+				{
+					$this->compileFile($less, $file);
+				}
 			}
 		}
 

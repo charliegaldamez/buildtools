@@ -41,8 +41,17 @@ class MinifyTask extends Task
 	/**
 	 * Collection of filesets
 	 * Used when linking contents of a directory
+	 *
+	 * @var array
 	 */
 	private $filesets = array();
+
+	/**
+	 * The file which is triggered by PHP Storm's File Watcher
+	 *
+	 * @var null
+	 */
+	protected $watcherFilePath = null;
 
 	/**
 	 * Creator for filesets
@@ -123,6 +132,16 @@ class MinifyTask extends Task
 	}
 
 	/**
+	 * Sets the file which is triggered by PHP Storm's File Watcher.
+	 *
+	 * @param  PhingFile  The source file. Either a string or an PhingFile object
+	 */
+	function setWatcherFilePath(PhingFile $file)
+	{
+		$this->watcherFilePath = $file;
+	}
+
+	/**
 	 * The main entry point
 	 *
 	 * @throws BuildException
@@ -131,23 +150,45 @@ class MinifyTask extends Task
 	{
 		$map = $this->getMap();
 
-		foreach ($map as $path)
+		if (is_file($this->watcherFilePath))
 		{
-			echo "\t\t\t$path\n";
-			$ext = pathinfo($path, PATHINFO_EXTENSION);
-
-			switch($ext)
+			// Only minify the file if it's in the fileset
+			if (in_array($this->watcherFilePath, $map))
 			{
-				case 'css':
-				case 'js':
-					exec("yuicompressor ".escapeshellarg($path)." -o '.".$ext."$:.min.".$ext."' ".escapeshellarg($path)." ".($this->debug ? '-v' : '')." --line-break 5000 --charset utf-8");
-					break;
-				default:
-					throw new BuildException('Invalid file extension!');
-					break;
+				$this->minify($this->watcherFilePath);
 			}
 		}
-
+		else
+		{
+			foreach ($map as $file)
+			{
+				$this->minify($file);
+			}
+		}	
+		
 		return true;
+	}
+
+	/**
+	 * Minifies a file using YUI compressor.
+	 *
+	 * @param $file
+	 *
+	 * @throws BuildException
+	 */
+	protected function minify($file)
+	{
+		echo "\t\t\t$file\n";
+
+		$ext = pathinfo($file, PATHINFO_EXTENSION);
+
+		if (in_array($ext, array('css', 'js')))
+		{
+			exec("yuicompressor ".escapeshellarg($file)." -o '.".$ext."$:.min.".$ext."' ".escapeshellarg($file)." ".($this->debug ? '-v' : '')." --line-break 5000 --charset utf-8");
+		}
+		else
+		{
+			throw new BuildException('Invalid file extension!');
+		}
 	}
 }

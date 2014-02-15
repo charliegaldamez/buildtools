@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <TaskOptions>
   <TaskOptions>
-    <option name="arguments" value="media" />
+    <option name="arguments" value="media -Dwatcherfilepath=$FilePath$" />
     <option name="checkSyntaxErrors" value="true" />
     <option name="description" value="Build media (compile LESS, minify CSS and JS)" />
     <option name="exitCodeBehavior" value="ERROR" />
@@ -27,7 +27,7 @@
     <envs />
   </TaskOptions>
   <TaskOptions>
-    <option name="arguments" value="media-minify" />
+    <option name="arguments" value="media-minify-css -Dwatcherfilepath=$FilePath$" />
     <option name="checkSyntaxErrors" value="true" />
     <option name="description" value="Minify .css files" />
     <option name="exitCodeBehavior" value="ERROR" />
@@ -52,31 +52,31 @@
     <option name="workingDir" value="$ProjectFileDir$/build" />
     <envs />
   </TaskOptions>
-	<TaskOptions>
-		<option name="arguments" value="media-minify" />
-		<option name="checkSyntaxErrors" value="true" />
-		<option name="description" value="Minify .js files" />
-		<option name="exitCodeBehavior" value="ERROR" />
-		<option name="fileExtension" value="js" />
-		<option name="immediateSync" value="true" />
-		<option name="name" value="JS" />
-		<option name="output" value="$FileDir$/$FileNameWithoutExtension$.min.js" />
-		<option name="outputFilters">
-			<array>
-				<FilterInfo>
-					<option name="description" value="lessc error format" />
-					<option name="name" value="lessc" />
-					<option name="regExp" value="$MESSAGE$$FILE_PATH$?:$LINE$:$COLUMN$" />
-				</FilterInfo>
-			</array>
-		</option>
-		<option name="outputFromStdout" value="false" />
-		<option name="passParentEnvs" value="true" />
-		<option name="program" value="/usr/local/zend/bin/phing" />
-		<option name="scopeName" value="Project Files" />
-		<option name="trackOnlyRoot" value="false" />
-		<option name="workingDir" value="$ProjectFileDir$/build" />
-		<envs />
-	</TaskOptions>
+  <TaskOptions>
+    <option name="arguments" value="media-minify-js -Dwatcherfilepath=$FilePath$" />
+    <option name="checkSyntaxErrors" value="true" />
+    <option name="description" value="Minify .js files" />
+    <option name="exitCodeBehavior" value="ERROR" />
+    <option name="fileExtension" value="js" />
+    <option name="immediateSync" value="true" />
+    <option name="name" value="JS" />
+    <option name="output" value="$FileDir$/$FileNameWithoutExtension$.min.js" />
+    <option name="outputFilters">
+      <array>
+        <FilterInfo>
+          <option name="description" value="lessc error format" />
+          <option name="name" value="lessc" />
+          <option name="regExp" value="$MESSAGE$$FILE_PATH$?:$LINE$:$COLUMN$" />
+        </FilterInfo>
+      </array>
+    </option>
+    <option name="outputFromStdout" value="false" />
+    <option name="passParentEnvs" value="true" />
+    <option name="program" value="/usr/local/zend/bin/phing" />
+    <option name="scopeName" value="Project Files" />
+    <option name="trackOnlyRoot" value="false" />
+    <option name="workingDir" value="$ProjectFileDir$/build" />
+    <envs />
+  </TaskOptions>
 </TaskOptions>
 
