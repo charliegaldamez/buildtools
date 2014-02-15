@@ -17,27 +17,31 @@ require_once 'less/parser/parser.php';
  * Compiles LESS using LESS compiler of http://leafo.net/lessphp/.
  *
  * Parameters:
+ * - file				The LESS file to compile. Alternatively you could provide a fileset
  * - todir (optional)	The directory to write CSS files to. Default directory: /../css
  * - formatter			The LESS formatter to use
  * - preserveComments	Do we need to preserve comments? Set to 0 to remove comments
  *
+ *
  * Example (replace \/ by /):
  * <code>
- *  <compileless todir="${dirs.plugins}/system/cookieconfirm/media/css">
+ *  <lesscompile todir="${dirs.plugins}/system/cookieconfirm/media/css">
  *		<fileset dir="${dirs.plugins}/system/cookieconfirm/media">
  *			<include name="*.less" />
  *			<include name="**\/*.less" />
  *		</fileset>
- * 	</compileless>
+ * 	</lesscompile>
  * </code>
  *
  * @see https://github.com/leafo/lessphp
  */
 class LessCompileTask extends Task
 {
-	protected $_toDir;
+	protected $file = null;
 
-	protected $_importDir;
+	protected $toDir;
+
+	protected $importDir;
 
 	/**
 	 * The used LESS formatter
@@ -47,18 +51,28 @@ class LessCompileTask extends Task
 	 * compressed 		— Compresses all the unrequired whitespace
 	 * classic 			— lessphp’s original formatter
 	 */
-	protected $_formatter = 'classic';
+	protected $formatter = 'classic';
 
 	/**
 	 * Set to true to preserve comments
 	 */
-	protected $_preserveComments = true;
+	protected $preserveComments = true;
 
 	/**
 	 * Collection of filesets
 	 * Used when linking contents of a directory
 	 */
-	private $_filesets = array();
+	private $filesets = array();
+
+	/**
+	 * Sets the LESS file to convert.
+	 *
+	 * @param  PhingFile  The source file. Either a string or an PhingFile object
+	 */
+	function setFile(PhingFile $file)
+	{
+		$this->file = $file;
+	}
 
 	/**
 	 * Sets the target directory
@@ -67,7 +81,7 @@ class LessCompileTask extends Task
 	 */
 	public function setToDir(PhingFile $path)
 	{
-		$this->_toDir = $path;
+		$this->toDir = $path;
 	}
 
 	/**
@@ -77,7 +91,7 @@ class LessCompileTask extends Task
 	 */
 	public function setImportDir(PhingFile $path)
 	{
-		$this->_importDir = $path;
+		$this->importDir = $path;
 	}
 
 	/**
@@ -87,7 +101,7 @@ class LessCompileTask extends Task
 	 */
 	public function setFormatter($formatter)
 	{
-		$this->_formatter = $formatter;
+		$this->formatter = $formatter;
 	}
 
 	/**
@@ -97,19 +111,19 @@ class LessCompileTask extends Task
 	 */
 	public function setPreserveComments($preserveComments)
 	{
-		$this->_preserveComments = $preserveComments;
+		$this->preserveComments = $preserveComments;
 	}
 
 	/**
-	 * Creator for _filesets
+	 * Creator for filesets
 	 *
 	 * @return FileSet
 	 */
 	public function createFileset()
 	{
-		$index = array_push($this->_filesets, new FileSet());
+		$index = array_push($this->filesets, new FileSet());
 
-		return $this->_filesets[$index-1];
+		return $this->filesets[$index-1];
 	}
 
 	/**
@@ -119,7 +133,7 @@ class LessCompileTask extends Task
 	 */
 	public function getFilesets()
 	{
-		return $this->_filesets;
+		return $this->filesets;
 	}
 
 	/**
@@ -127,7 +141,7 @@ class LessCompileTask extends Task
 	 */
 	function getToDir()
 	{
-		return $this->_toDir;
+		return $this->toDir;
 	}
 
 	/**
@@ -143,7 +157,7 @@ class LessCompileTask extends Task
 
 		if (empty($fileSets))
 		{
-			throw new BuildException('Fileset may not be empty');
+			return array();
 		}
 
 		$targets = array();
@@ -189,7 +203,7 @@ class LessCompileTask extends Task
 	public function init()
 	{
 		// Go one level up, else we get the build directory
-		$this->_importDir = array(realpath($this->project->getBasedir()->getAbsolutePath() . '/..'));
+		$this->importDir = array(realpath($this->project->getBasedir()->getAbsolutePath() . '/..'));
 
 		return true;
 	}
@@ -201,46 +215,64 @@ class LessCompileTask extends Task
 	 */
 	function main()
 	{
-		require_once 'less/formatter/' . $this->_formatter . '.php';
+		require_once 'less/formatter/' . $this->formatter . '.php';
 
 		$less = new TxbtLess;
-		$less->setImportDir($this->_importDir);
-		$less->setFormatter($this->_formatter);
-		$less->setPreserveComments($this->_preserveComments);
+		$less->setImportDir($this->importDir);
+		$less->setFormatter($this->formatter);
+		$less->setPreserveComments($this->preserveComments);
 
-		$map = $this->getMap();
-
-		foreach ($map as $file)
+		if ($this->file !== null && $this->file->exists())
 		{
-			echo "\t\t\t$file\n";
+			$this->compileFile($less, $this->file);
+		}
+		else
+		{
+			$map = $this->getMap();
 
-			try
+			foreach ($map as $file)
 			{
-				$pathParts = pathinfo($file);
-				$dirName = $pathParts['dirname'];
-				$fileName = $pathParts['filename'];
-				$targetDir = $dirName . '/../css';
-
-				if (!empty($this->_toDir))
-				{
-					$targetPhingFile = new PhingFile($this->_toDir);
-					$targetDir = $targetPhingFile->getPath();
-				}
-
-				if (!is_dir($targetDir))
-				{
-					mkdir($targetDir, 0755);
-				}
-
-				$targetFile = $targetDir . '/' . $fileName . '.css';
-				$less->compileFile($file, $targetFile);
-			}
-			catch (Exception $e)
-			{
-				$this->log("Error compiling LESS file " . $file . ": " . $e->getMessage(), Project::MSG_ERR);
+				$this->compileFile($less, $file);
 			}
 		}
 
 		return true;
+	}
+
+	/**
+	 * Compiles a LESS file.
+	 *
+	 * @param $less
+	 * @param $file
+	 */
+	private function compileFile($less, $file)
+	{
+		echo "\t\t\t$file\n";
+
+		try
+		{
+			$pathParts = pathinfo($file);
+			$dirName = $pathParts['dirname'];
+			$fileName = $pathParts['filename'];
+			$targetDir = $dirName . '/../css';
+
+			if (!empty($this->toDir))
+			{
+				$targetPhingFile = new PhingFile($this->toDir);
+				$targetDir = $targetPhingFile->getPath();
+			}
+
+			if (!is_dir($targetDir))
+			{
+				mkdir($targetDir, 0755);
+			}
+
+			$targetFile = $targetDir . '/' . $fileName . '.css';
+			$less->compileFile($file, $targetFile);
+		}
+		catch (Exception $e)
+		{
+			$this->log("Error compiling LESS file " . $file . ": " . $e->getMessage(), Project::MSG_ERR);
+		}
 	}
 }
