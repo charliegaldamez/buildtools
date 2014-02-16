@@ -55,7 +55,7 @@ class LessCompileTask extends Task
 	 * 						comments and uses .min.css by default.
 	 * - classic 			lessphp’s original formatter
 	 */
-	protected $formatter = 'classic';
+	protected $formatter = 'joomla';
 
 	/**
 	 * Set to true to preserve comments
