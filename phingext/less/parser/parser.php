@@ -47,6 +47,10 @@ class TxbtLessParser
 
 	protected static $whitePattern;
 
+	/** Txbt - BEGIN CHANGE * */
+	protected static $whitePatternAlwaysPreserve;
+	/** Txbt - END CHANGE * */
+
 	protected static $commentMulti;
 
 	protected static $commentSingle = "//";
@@ -107,6 +111,11 @@ class TxbtLessParser
 
 			self::$commentMulti = $commentMultiLeft . '.*?' . $commentMultiRight;
 			self::$whitePattern = '/' . $commentSingle . '[^\n]*\s*|(' . self::$commentMulti . ')\s*|\s+/Ais';
+
+			/** Txbt - BEGIN CHANGE * */
+			$commentMultiAlwaysPreserve = $commentMultiLeft . '\!.*?' . $commentMultiRight . '(\n)?';
+			self::$whitePatternAlwaysPreserve = '/' . $commentSingle . '[^\n]*\s*|(' . $commentMultiAlwaysPreserve . ')\s*|\s+/Ais';
+			/** Txbt - END CHANGE * */
 		}
 	}
 
@@ -1935,30 +1944,34 @@ class TxbtLessParser
 	 */
 	protected function whitespace()
 	{
+		/** Txbt - BEGIN CHANGE * */
+
+		$gotWhite = false;
+
 		if ($this->writeComments)
 		{
-			$gotWhite = false;
-
-			while (preg_match(self::$whitePattern, $this->buffer, $m, null, $this->count))
-			{
-				if (isset($m[1]) && empty($this->seenComments[$this->count]))
-				{
-					$this->append(array("comment", $m[1]));
-					$this->seenComments[$this->count] = true;
-				}
-
-				$this->count += strlen($m[0]);
-				$gotWhite = true;
-			}
-
-			return $gotWhite;
+			$pattern = self::$whitePattern;
 		}
 		else
 		{
-			$this->match("", $m);
-
-			return strlen($m[0]) > 0;
+			$pattern = self::$whitePatternAlwaysPreserve;
 		}
+
+		while (preg_match($pattern, $this->buffer, $m, null, $this->count))
+		{
+			if (isset($m[1]) && empty($this->seenComments[$this->count]))
+			{
+				$this->append(array("comment", $m[1]));
+				$this->seenComments[$this->count] = true;
+			}
+
+			$this->count += strlen($m[0]);
+			$gotWhite = true;
+		}
+
+		/** Txbt - END CHANGE * */
+
+		return $gotWhite;
 	}
 
 	/**
@@ -2114,31 +2127,57 @@ class TxbtLessParser
 	/**
 	 * Remove comments from $text
 	 *
-	 * @param   [type]  $text  [description]
+	 * @param 	$text
+	 *
+	 * @return 	string
 	 *
 	 * @todo: make it work for all functions, not just url
-	 *
-	 * @return  [type]         [description]
 	 */
 	protected function removeComments($text)
 	{
-		$look = array(
-			'url(', '//', '/*', '"', "'"
-		);
+		/** Txbt - BEGIN CHANGE * */
 
 		$out = '';
 		$min = null;
 
 		while (true)
 		{
-			// Find the next item
-			foreach ($look as $token)
-			{
-				$pos = strpos($text, $token);
+			$startPreserveComments	= $this->getStringPositions($text, '/*!');
+			$endPreserveComments 	= $this->getStringPositions($text, '*/');
 
-				if ($pos !== false)
+			// url\(		matches: url(
+			// //			matches: /
+			// /\*(?!\!)	matches: /* not followed by a !
+			// "			matches: "
+			// \'			matches: '
+			$hasMatch = preg_match('#(url\(|//|\/\*(?!\!)|"|\')#', $text, $matches, PREG_OFFSET_CAPTURE);
+
+			// Remove all matches (= $matches[0]) from matches
+			array_shift($matches);
+
+			// Find the next item
+			if ($hasMatch)
+			{
+				foreach ($matches as $match)
 				{
-					if (!isset($min) || $pos < $min[1])
+					$token = $match[0];
+					$pos = $match[1];
+
+					// Don't remove comments in a multi comment which needs to be preserved (/*! ... */ )
+					// Else for example "@link http://site.ext" is converted to "@link http:"
+					$skip = false;
+					$preserveCommentsCount = count($startPreserveComments);
+
+					for ($i = 0; $i < $preserveCommentsCount; $i++)
+					{
+						if (($pos > $startPreserveComments[$i]) && ($pos < $endPreserveComments[$i]))
+						{
+							$skip = true;
+							break;
+						}
+					}
+
+					if (!$skip && (!isset($min) || $pos < $min[1]))
 					{
 						$min = array($token, $pos);
 					}
@@ -2157,7 +2196,6 @@ class TxbtLessParser
 			switch ($min[0])
 			{
 				case 'url(':
-
 					if (preg_match('/url\(.*?\)/', $text, $m, 0, $count))
 					{
 						$count += strlen($m[0]) - strlen($min[0]);
@@ -2186,7 +2224,7 @@ class TxbtLessParser
 
 					break;
 				case '/*':
-					if (preg_match('/\/\*.*?\*\//s', $text, $m, 0, $count))
+					if (preg_match('/\/\*(?!\!).*?\*\//s', $text, $m, 0, $count))
 					{
 						$skip = strlen($m[0]);
 						$newlines = substr_count($m[0], "\n");
@@ -2206,6 +2244,37 @@ class TxbtLessParser
 			$min = null;
 		}
 
+		/** Txbt - END CHANGE * */
+
 		return $out . $text;
 	}
+
+	/** Txbt - BEGIN CHANGE * */
+
+	/**
+	 * Search through $buffer and find $needle positions in $haystack
+	 * Used to detect /*! and */
+	/*
+	 * @param	string	$haystack
+	 * @param	string	$needle
+	 *
+	 * @return	array	$positions	String positions of $needle in $haystack.
+	 */
+	private function getStringPositions($haystack, $needle)
+	{
+		$index = 0;
+		$offset = 0;
+		$positions = array();
+
+		while (($pos = stripos($haystack, $needle, $offset)) !== false)
+		{
+			$positions[$index] = $pos;
+			$index++;
+			$offset = $pos + 1;
+		}
+		
+		return $positions;
+	}
+
+	/** Txbt - END CHANGE * */
 }
