@@ -8,8 +8,9 @@
  */
 
 require_once 'phing/Task.php';
-require_once 'less/less.php';
-require_once 'less/parser/parser.php';
+require_once 'autoloader.php';
+
+TxbtAutoloader::init();
 
 /**
  * Class LessCompileTask

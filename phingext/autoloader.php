@@ -1,6 +1,6 @@
 <?php
 /**
- * @package			Twentronix Shortcuts
+ * @package			TwentronixBuildTools
  * @author			Jurian Even
  * @link			https://www.twentronix.com
  * @copyright		Copyright (C) 2013 - 2014 Twentronix. All rights reserved.
@@ -48,7 +48,7 @@ class TxbtAutoloader
 	{
 		self::$phingextPath = realpath(__DIR__);
 
-		spl_autoload_register(array($this,'autoload_phingext'));
+		spl_autoload_register(array($this, 'autoload_phingext'));
 	}
 
 	/**
