@@ -2150,15 +2150,12 @@ class TxbtLessParser
 			// /\*(?!\!)	matches: /* not followed by a !
 			// "			matches: "
 			// \'			matches: '
-			$hasMatch = preg_match('#(url\(|//|\/\*(?!\!)|"|\')#', $text, $matches, PREG_OFFSET_CAPTURE);
-
-			// Remove all matches (= $matches[0]) from matches
-			array_shift($matches);
+			$hasMatch = preg_match_all('#(url\(|\/\/|\/\*(?!\!)|\"|\')#', $text, $matches, PREG_OFFSET_CAPTURE);
 
 			// Find the next item
 			if ($hasMatch)
 			{
-				foreach ($matches as $match)
+				foreach ($matches[0] as $match)
 				{
 					$token = $match[0];
 					$pos = $match[1];
@@ -2224,7 +2221,7 @@ class TxbtLessParser
 
 					break;
 				case '/*':
-					if (preg_match('/\/\*(?!\!).*?\*\//s', $text, $m, 0, $count))
+					if (preg_match('#\/\*(?!\!).*?\*\/#s', $text, $m, 0, $count))
 					{
 						$skip = strlen($m[0]);
 						$newlines = substr_count($m[0], "\n");
