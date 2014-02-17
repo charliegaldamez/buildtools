@@ -3,7 +3,7 @@
   <TaskOptions>
     <option name="arguments" value="media -Dwatcherfilepath=$FilePath$" />
     <option name="checkSyntaxErrors" value="true" />
-    <option name="description" value="Build media (compile LESS, minify CSS and JS)" />
+    <option name="description" value="Compile LESS files and minify CSS" />
     <option name="exitCodeBehavior" value="ERROR" />
     <option name="fileExtension" value="less" />
     <option name="immediateSync" value="true" />
