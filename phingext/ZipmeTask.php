@@ -39,11 +39,16 @@ class ZipmeTask extends MatchingTask
      */
     private $includeEmpty = true;
 
-    private $filesets = array();
-    private $fileSetFiles = array();
+	/**
+	 * Filesets
+	 *
+	 * @var array
+	 */
+	private $filesets = array();
 
     /**
      * Add a new fileset.
+	 *
      * @return FileSet
      */
     public function createFileSet()
@@ -56,6 +61,7 @@ class ZipmeTask extends MatchingTask
 
     /**
      * Add a new fileset.
+	 *
      * @return FileSet
      */
     public function createZipmeFileSet()
@@ -68,6 +74,7 @@ class ZipmeTask extends MatchingTask
 
     /**
      * Set is the name/location of where to create the zip file.
+	 *
      * @param PhingFile $destFile The output of the zip
      */
     public function setDestFile(PhingFile $destFile)
@@ -77,9 +84,10 @@ class ZipmeTask extends MatchingTask
 
     /**
      * Set the include empty dirs flag.
+	 *
      * @param  boolean  Flag if empty dirs should be tarred too
+	 *
      * @return void
-     * @access public
      */
     public function setIncludeEmptyDirs($bool)
 	{
@@ -88,6 +96,7 @@ class ZipmeTask extends MatchingTask
 
     /**
      * This is the base directory to look in for things to zip.
+	 *
      * @param PhingFile $baseDir
      */
     public function setBasedir(PhingFile $baseDir)
@@ -108,7 +117,8 @@ class ZipmeTask extends MatchingTask
     }
 
     /**
-     * do the work
+     * Do the work
+	 *
      * @throws BuildException
      */
     public function main()
@@ -250,12 +260,16 @@ class ZipmeTask extends MatchingTask
  *
  * Permissions are currently not implemented by PEAR Archive_Tar,
  * but hopefully they will be in the future.
- *
  */
 class ZipmeFileSet extends FileSet
 {
+	/**
+	 * The files to zip
+	 *
+	 * @var 	null|array
+	 */
+	private $files = null;
 
-    private $files = null;
 
     /**
      *  Get a list of files and directories specified in the fileset.
