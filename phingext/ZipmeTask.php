@@ -266,10 +266,22 @@ class ZipmeFileSet extends FileSet
 	/**
 	 * The files to zip
 	 *
-	 * @var 	null|array
+	 * @var		null|array
 	 */
 	private $files = null;
 
+	/**
+	 * Constructor
+	 *
+	 * @param 	null $fileset
+	 */
+	public function __construct($fileset = null)
+	{
+		parent::__construct($fileset);
+
+		// Expand/dereference symbolic links in order to also include nested symlinks to the zipfile
+		$this->setExpandSymbolicLinks(true);
+	}
 
     /**
      *  Get a list of files and directories specified in the fileset.
