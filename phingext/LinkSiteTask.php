@@ -217,9 +217,12 @@ class LinkSiteTask extends LinkTask
 		$this->_fetchModules();
 		$this->_fetchPlugins();
 
-		// Unlink and link component, modules and plugins
-		$this->unlinkComponent();
-		$this->linkComponent();
+		if (!empty($this->_component))
+		{
+			// Unlink and link component, modules and plugins
+			$this->unlinkComponent();
+			$this->linkComponent();
+		}
 
 		$this->unlinkModules();
 		$this->linkModules();
@@ -561,6 +564,22 @@ class LinkSiteTask extends LinkTask
 	{
 		$path = $this->_root.'/component';
 
+		if (!is_dir($path))
+		{
+			$this->_component = array(
+				'component'		=> '',
+				'siteFolder'	=> '',
+				'adminFolder'	=> '',
+				'mediaFolder'	=> '',
+				'cliFolder'		=> '',
+				'siteLangPath'	=> '',
+				'siteLangFiles'	=> '',
+				'adminLangPath'	=> '',
+				'adminLangFiles'=> '',
+			);
+			return;
+		}
+
 		// Find the XML files
 		foreach(new DirectoryIterator($path) as $fileInfo) {
 			if($fileInfo->isDot()) continue;
@@ -830,8 +849,15 @@ class LinkSiteTask extends LinkTask
 	 */
 	public function unlinkComponent()
 	{
+		if (empty($this->_component))
+		{
+			return;
+		}
+
 		$this->log("Unlinking component ".$this->_component['component'], Project::MSG_INFO);
 
+		$dirs = array();
+		$files = array();
 		$map = $this->_mapComponent();
 		extract($map);
 
@@ -851,6 +877,9 @@ class LinkSiteTask extends LinkTask
 		foreach($this->_modules as $module)
 		{
 			$this->log("Unlinking module ".$module['module'].' ('.$module['client'].")", Project::MSG_INFO);
+
+			$dirs = array();
+			$files = array();
 
 			$map = $this->_mapModule($module);
 			extract($map);
@@ -873,6 +902,9 @@ class LinkSiteTask extends LinkTask
 		{
 	 	  	$this->log("Unlinking plugin ".$plugin['plugin'].' ('.$plugin['folder'].")", Project::MSG_INFO);
 
+			$dirs = array();
+			$files = array();
+
 			$map = $this->_mapPlugin($plugin);
 			extract($map);
 
@@ -889,7 +921,15 @@ class LinkSiteTask extends LinkTask
 	 */
 	public function linkComponent()
 	{
+		if (empty($this->_component['component']))
+		{
+			return;
+		}
+
 		$this->log("Linking component ".$this->_component['component'], Project::MSG_INFO);
+
+		$dirs = array();
+		$files = array();
 
 		$map = $this->_mapComponent();
 		extract($map);
@@ -915,6 +955,9 @@ class LinkSiteTask extends LinkTask
 		{
 			$this->log("Linking module ".$module['module'].' ('.$module['client'], Project::MSG_INFO);
 
+			$dirs = array();
+			$files = array();
+
 			$map = $this->_mapModule($module);
 			extract($map);
 
@@ -939,6 +982,9 @@ class LinkSiteTask extends LinkTask
 		foreach($this->_plugins as $plugin)
 		{
 			$this->log("Linking plugin ".$plugin['plugin'].' ('.$plugin['folder'].")", Project::MSG_INFO);
+
+			$dirs = array();
+			$files = array();
 
 			$map = $this->_mapPlugin($plugin);
 			extract($map);
