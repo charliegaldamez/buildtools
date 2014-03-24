@@ -879,7 +879,7 @@ class LinkSiteTask extends LinkTask
 	 */
 	public function unlinkComponent()
 	{
-		if (empty($this->_component))
+		if (empty($this->_component['component']))
 		{
 			return;
 		}
