@@ -192,18 +192,26 @@ class DocexportTask extends matchingTask
 
 		// Scan for image files
 		$this->log("Scanning for image files");
-		$handle = opendir($this->imagefile_directory);
-		$id = 0;
 		$images = array();
-		while( $file = readdir($handle) )
+
+		if (empty($this->imagefile_directory))
 		{
-			if( !is_dir($file) && in_array($this->getFileExtension($file), array('png','jpg','jpeg','gif','bmp')) )
-			{
-				$images[$file] = ++$id;
-			}
+			$this->log("\timagedir not provided, continuing without images");
 		}
-		closedir($handle);
-		unset($handle); unset($file); unset($id);
+		else
+		{
+			$handle = opendir($this->imagefile_directory);
+			$id = 0;
+			while( $file = readdir($handle) )
+			{
+				if( !is_dir($file) && in_array($this->getFileExtension($file), array('png','jpg','jpeg','gif','bmp')) )
+				{
+					$images[$file] = ++$id;
+				}
+			}
+			closedir($handle);
+			unset($handle); unset($file); unset($id);
+		}
 
 		// Parse HTML files
 		$this->log("Parsing HTML files");
