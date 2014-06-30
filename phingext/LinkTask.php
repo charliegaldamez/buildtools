@@ -1,4 +1,10 @@
 <?php
+/**
+ * This file is copied verbatim from Akeeba Build Tools.
+ *
+ * @link	https://github.com/akeeba/buildfiles
+ */
+
 define('IS_WINDOWS', substr(PHP_OS, 0, 3) == 'WIN');
 
 require_once 'phing/Task.php';
@@ -38,14 +44,14 @@ class LinkTask extends SymlinkTask
 	/**
 	 * Link type.
 	 *
-	 * @var 	string
+	 * @var    string
 	 */
 	protected $_type = 'symlink';
 
 	/**
 	 * Setter for _type.
 	 *
-	 * @param 	string $type
+	 * @param    string $type
 	 */
 	public function setType($type)
 	{
@@ -55,7 +61,7 @@ class LinkTask extends SymlinkTask
 	/**
 	 * Getter for _type.
 	 *
-	 * @return 	string
+	 * @return    string
 	 */
 	public function getType()
 	{
@@ -69,19 +75,22 @@ class LinkTask extends SymlinkTask
 	 */
 	public function main()
 	{
-		$map  = $this->getMap();
-		$to   = $this->getLink();
+		$map = $this->getMap();
+		$to = $this->getLink();
 		$type = $this->getType();
 
 		// Single file symlink
-		if(is_string($map)) {
+		if (is_string($map))
+		{
 			$from = $map;
 			$this->doLink($from, $to, $type);
+
 			return true;
 		}
 
 		// Multiple symlinks
-		foreach($map as $name => $from) {
+		foreach ($map as $name => $from)
+		{
 			$realTo = $to . DIRECTORY_SEPARATOR . $name;
 			$this->doLink($from, $realTo, $type);
 		}
@@ -92,14 +101,15 @@ class LinkTask extends SymlinkTask
 	/**
 	 * Links a file or folder.
 	 *
-	 * @param string $from	Where to link from.
-	 * @param string $to	Where to link to.
-	 * @param string $type	The link type. Possible values: 'symlink' (default), 'hardlink'.
+	 * @param string $from Where to link from.
+	 * @param string $to   Where to link to.
+	 * @param string $type The link type. Possible values: 'symlink' (default), 'hardlink'.
 	 */
 	protected function doLink($from, $to, $type)
 	{
 		// Translate windows paths
-		if(IS_WINDOWS) {
+		if (IS_WINDOWS)
+		{
 			// Windows doesn't play nice with paths containing UNIX path separators
 			$to = $this->TranslateWinPath($to);
 			$from = $this->TranslateWinPath($from);
@@ -108,42 +118,43 @@ class LinkTask extends SymlinkTask
 		}
 
 		// Unlink
-		if(is_file($to) || is_dir($to) || is_link($to) || file_exists($to)) {
-			if(IS_WINDOWS && is_dir($to)) {
+		if (is_file($to) || is_dir($to) || is_link($to) || file_exists($to))
+		{
+			if (IS_WINDOWS && is_dir($to))
+			{
 				// Windows can't unlink() directory symlinks; it needs rmdir() to be used instead
 				$res = @rmdir($to);
-			} elseif (is_file($to) || is_dir($to)) {
+			}
+			elseif (is_file($to) || is_dir($to))
+			{
 				$res = @unlink($to);
 			}
-			if(!$res) {
+			if (!$res)
+			{
 				$this->log('Failed unlink: ' . $to, Project::MSG_ERR);
+
 				return;
 			}
 		}
 
-		// Create nested directory if necessarily
-		$dirTo = dirname($to);
-		if (!is_dir($dirTo) && !is_link($dirTo) && !file_exists($dirTo))
-		{
-			mkdir($dirTo, 0755, true);
-		}
+		$this->log('Linking (' . $type . '): ' . $from . ' to ' . $to, Project::MSG_INFO);
 
-		$this->log('Linking (' . $type .'): ' . $from . ' to ' . $to, Project::MSG_INFO);
-
-		if($type == 'symlink')
+		if ($type == 'symlink')
 		{
 			$res = @symlink($from, $to);
 		}
-		elseif($type == 'hardlink')
+		elseif ($type == 'hardlink')
 		{
 			$res = @link($from, $to);
 		}
-
-		if(!$res)
+		if (!$res)
 		{
-			if($type == 'symlink') {
+			if ($type == 'symlink')
+			{
 				$this->log('Failed symlink: ' . $to, Project::MSG_ERR);
-			} elseif($type == 'hardlink') {
+			}
+			elseif ($type == 'hardlink')
+			{
 				$this->log('Failed hardlink: ' . $to, Project::MSG_ERR);
 			}
 		}
@@ -152,39 +163,35 @@ class LinkTask extends SymlinkTask
 	/**
 	 * Translates the path for Windows.
 	 *
-	 * @param 	$path			The untranslated path.
+	 * @param $p_path
 	 *
-	 * @return 	mixed|string	The translated path.
-	 *
-	 * @see		http://en.wikipedia.org/wiki/Path_(computing)
+	 * @return mixed|string
 	 */
-	protected function TranslateWinPath($path)
+	protected function TranslateWinPath($p_path)
 	{
-		// Initialise the good and bad directory separators
-		$DsGood = IS_WINDOWS ? '\\' : '/';
-		$DsBad  = IS_WINDOWS ? '/' : '\\';
+		$is_unc = false;
 
 		if (IS_WINDOWS)
 		{
-			// Fix potential incorrect Windows directory separator
-			if ((strpos($path, $DsBad) > 0) || (substr($path, 0, 1) == $DsBad)){
-				$path = strtr($path, $DsBad, $DsGood);
-			}
-
-			// Is this an UNC path?
-			$is_unc = (substr($path, 0, 2) == ($DsGood . $DsGood));
-
-			// Fix UNC paths
-			if ($is_unc)
+			// Is this a UNC path?
+			$is_unc = (substr($p_path, 0, 2) == '\\\\') || (substr($p_path, 0, 2) == '//');
+			// Change potential windows directory separator
+			if ((strpos($p_path, '\\') > 0) || (substr($p_path, 0, 1) == '\\'))
 			{
-				$path = $DsGood . $DsGood .ltrim($path, $DsGood);
+				$p_path = strtr($p_path, '\\', '/');
 			}
 		}
 
 		// Remove multiple slashes
-		$path = str_replace('///', '/', $path);
-		$path = str_replace('//', '/', $path);
+		$p_path = str_replace('///', '/', $p_path);
+		$p_path = str_replace('//', '/', $p_path);
 
-		return $path;
+		// Fix UNC paths
+		if ($is_unc)
+		{
+			$p_path = '//' . ltrim($p_path, '/');
+		}
+
+		return $p_path;
 	}
 }

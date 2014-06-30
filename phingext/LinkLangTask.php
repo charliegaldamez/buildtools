@@ -1,6 +1,12 @@
 <?php
+/**
+ * This file is copied verbatim from Akeeba Build Tools.
+ *
+ * @link	https://github.com/akeeba/buildfiles
+ */
+
 require_once 'phing/Task.php';
-require_once dirname(__FILE__).'/LinkTask.php';
+require_once dirname(__FILE__) . '/LinkTask.php';
 
 /**
  * Class LinkLangTask
@@ -17,11 +23,11 @@ class LinkLangTask extends LinkTask
 	/**
 	 * Main entry point for task.
 	 *
-	 * @return 	bool
+	 * @return    bool
 	 */
 	public function main()
 	{
-		$map  = $this->getMap();
+		$map = $this->getMap();
 		$root = $this->getLink();
 		$type = $this->getType();
 		$target = $map;
@@ -32,14 +38,12 @@ class LinkLangTask extends LinkTask
 			{
 				continue;
 			}
-
 			if ($oArea->isDot())
 			{
 				continue;
 			}
-
 			$area = $oArea->getFilename();
-			$areaDir = $root.'/'.$area;
+			$areaDir = $root . '/' . $area;
 
 			$this->log("\t$area\n", Project::MSG_INFO);
 
@@ -49,25 +53,23 @@ class LinkLangTask extends LinkTask
 				{
 					continue;
 				}
-
 				if ($oModule->isDot())
 				{
 					continue;
 				}
 
 				$module = $oModule->getFilename();
-				$moduleDir = $areaDir.'/'.$module;
+				$moduleDir = $areaDir . '/' . $module;
 
 				$this->log("\t\t$module", Project::MSG_INFO);
 
-				$from = $target.'/'.$area.'/'.$module.'/en-GB';
-				$to = $moduleDir.'/language/en-GB';
+				$from = $target . '/' . $area . '/' . $module . '/en-GB';
+				$to = $moduleDir . '/language/en-GB';
 
 				if (!is_dir($from))
 				{
 					// Some things may be untranslated
 					$this->log("\tNot translated\n", Project::MSG_ERR);
-
 					continue;
 				}
 
