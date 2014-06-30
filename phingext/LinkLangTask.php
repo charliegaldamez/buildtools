@@ -26,19 +26,34 @@ class LinkLangTask extends LinkTask
 		$type = $this->getType();
 		$target = $map;
 
-		foreach(new DirectoryIterator($root) as $oArea)
+		foreach (new DirectoryIterator($root) as $oArea)
 		{
-			if (!$oArea->isDir()) continue;
-			if ($oArea->isDot())  continue;
+			if (!$oArea->isDir())
+			{
+				continue;
+			}
+
+			if ($oArea->isDot())
+			{
+				continue;
+			}
+
 			$area = $oArea->getFilename();
 			$areaDir = $root.'/'.$area;
 
 			$this->log("\t$area\n", Project::MSG_INFO);
 
-			foreach(new DirectoryIterator($areaDir) as $oModule)
+			foreach (new DirectoryIterator($areaDir) as $oModule)
 			{
-				if (!$oModule->isDir()) continue;
-				if ($oModule->isDot())  continue;
+				if (!$oModule->isDir())
+				{
+					continue;
+				}
+
+				if ($oModule->isDot())
+				{
+					continue;
+				}
 
 				$module = $oModule->getFilename();
 				$moduleDir = $areaDir.'/'.$module;
@@ -52,6 +67,7 @@ class LinkLangTask extends LinkTask
 				{
 					// Some things may be untranslated
 					$this->log("\tNot translated\n", Project::MSG_ERR);
+
 					continue;
 				}
 

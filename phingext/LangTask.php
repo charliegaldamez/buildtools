@@ -56,48 +56,96 @@ class LangTask extends Task
 		$this->mergeLangRet($ret, $this->scanLangDir($root.'/component/backend'), 'backend');
 
 		// Scan modules, admin
-		try {
-			foreach(new DirectoryIterator($root.'/modules/admin') as $mname) {
-				if($mname->isDot()) continue;
-				if(!$mname->isDir()) continue;
+		try
+		{
+			foreach (new DirectoryIterator($root.'/modules/admin') as $mname)
+			{
+				if ($mname->isDot())
+				{
+					continue;
+				}
+				
+				if (!$mname->isDir())
+				{
+					continue;
+				}
+
 				$module = $mname->getFilename();
 				$this->mergeLangRet($ret, $this->scanLangDir($root.'/modules/admin/'.$module), 'backend');
 			}
-		} catch (Exception $exc) {
+		}
+		catch (Exception $exc)
+		{
 			//echo $exc->getTraceAsString();
 		}
 
 		// Scan modules, site
-		try {
-			foreach(new DirectoryIterator($root.'/modules/site') as $mname) {
-				if($mname->isDot()) continue;
-				if(!$mname->isDir()) continue;
+		try
+		{
+			foreach (new DirectoryIterator($root.'/modules/site') as $mname)
+			{
+				if ($mname->isDot())
+				{
+					continue;
+				}
+
+				if (!$mname->isDir())
+				{
+					continue;
+				}
+
 				$module = $mname->getFilename();
 				$this->mergeLangRet($ret, $this->scanLangDir($root.'/modules/site/'.$module), 'backend');
 			}
-		} catch (Exception $exc) {
+		} catch (Exception $exc)
+		{
 			//echo $exc->getTraceAsString();
 		}
 
 		// Scan plugins
-		try {
-			foreach(new DirectoryIterator($root.'/plugins') as $fldname) {
-				if($fldname->isDot()) continue;
-				if(!$fldname->isDir()) continue;
+		try
+		{
+			foreach (new DirectoryIterator($root.'/plugins') as $fldname)
+			{
+				if ($fldname->isDot())
+				{
+					continue;
+				}
+
+				if (!$fldname->isDir())
+				{
+					continue;
+				}
+
 				$path = $root.'/plugins/'.$fldname->getFilename();
+
 				// Scan this folder for plugins
-				try {
-					foreach(new DirectoryIterator($path) as $pname) {
-						if($pname->isDot()) continue;
-						if(!$pname->isDir()) continue;
+				try
+				{
+					foreach (new DirectoryIterator($path) as $pname)
+					{
+						if ($pname->isDot())
+						{
+							continue;
+						}
+
+						if (!$pname->isDir())
+						{
+							continue;
+						}
+
 						$plugin = $pname->getFilename();
 						$this->mergeLangRet($ret, $this->scanLangDir($path.'/'.$plugin), 'backend');
 					}
-				} catch (Exception $exc) {
+				}
+				catch (Exception $exc)
+				{
 					//echo $exc->getTraceAsString();
 				}
 			}
-		} catch (Exception $exc) {
+		}
+		catch (Exception $exc)
+		{
 			//echo $exc->getTraceAsString();
 		}
 
@@ -111,13 +159,18 @@ class LangTask extends Task
 	 */
 	private function mergeLangRet(&$ret, $temp, $area = 'frontend')
 	{
-		foreach($temp as $lang => $files) {
+		foreach ($temp as $lang => $files)
+		{
 			$existing = array();
-			if(array_key_exists($lang, $ret)) {
-				if(array_key_exists($area, $ret[$lang])) {
+
+			if (array_key_exists($lang, $ret))
+			{
+				if (array_key_exists($area, $ret[$lang]))
+				{
 					$existing = $ret[$lang][$area];
 				}
 			}
+
 			$ret[$lang][$area] = array_merge($existing, $files);
 		}
 	}
@@ -132,26 +185,54 @@ class LangTask extends Task
 	private function scanLangDir($path)
 	{
 		$langs = array();
-		try {
-			foreach(new DirectoryIterator($path) as $file) {
-				if($file->isDot()) continue;
-				if(!$file->isDir()) continue;
+
+		try
+		{
+			foreach (new DirectoryIterator($path) as $file)
+			{
+				if ($file->isDot())
+				{
+					continue;
+				}
+
+				if (!$file->isDir())
+				{
+					continue;
+				}
+
 				$langs[] = $file->getFileName();
 			}
-		} catch (Exception $exc) {
+		}
+		catch (Exception $exc)
+		{
 			//echo $exc->getTraceAsString();
 		}
 
 		$ret = array();
-		foreach($langs as $lang) {
-			try {
-				foreach(new DirectoryIterator($path.'/'.$lang) as $file) {
-					if(!$file->isFile()) continue;
+
+		foreach ($langs as $lang)
+		{
+			try
+			{
+				foreach (new DirectoryIterator($path.'/'.$lang) as $file)
+				{
+					if (!$file->isFile())
+					{
+						continue;
+					}
+
 					$fname = $file->getFileName();
-					if(substr($fname,-4) != '.ini') continue;
+
+					if (substr($fname,-4) != '.ini')
+					{
+						continue;
+					}
+
 					$ret[$lang][] = $path.'/'.$lang.'/'.$fname;
 				}
-			} catch (Exception $exc) {
+			}
+			catch (Exception $exc)
+			{
 				//echo $exc->getTraceAsString();
 			}
 		}
@@ -167,7 +248,7 @@ class LangTask extends Task
 	public function main()
 	{
 		// Load the properties
-		$props = parse_ini_file( 'build.properties');
+		$props = parse_ini_file('build.properties');
 
 		// Get parameters from build.properties
 		$author 		= $props['langbuilder.author'];
@@ -203,7 +284,9 @@ class LangTask extends Task
 
 		$langHTMLTable = '';
 		$row = 1;
-		foreach($langs as $tag => $files) {
+
+		foreach ($langs as $tag => $files)
+		{
 			$langName = $langToName[$tag];
 			echo "Building $langName ($tag)...\n";
 
@@ -232,20 +315,30 @@ class LangTask extends Task
 
 ENDHEAD;
 
-			if(array_key_exists('backend', $files)){
+			if (array_key_exists('backend', $files))
+			{
 				$j20XML .= "\t\t<files folder=\"backend\" target=\"administrator/language/$tag\">\n";
-				foreach($files['backend'] as $file) {
+
+				foreach ($files['backend'] as $file)
+				{
 					$j20XML .= "\t\t\t<filename>".baseName($file)."</filename>\n";
 				}
+
 				$j20XML .= "\t\t</files>\n";
 			}
-			if(array_key_exists('frontend', $files)){
+
+			if (array_key_exists('frontend', $files))
+			{
 				$j20XML .= "\t\t<files folder=\"frontend\" target=\"language/$tag\">\n";
-				foreach($files['frontend'] as $file) {
+
+				foreach ($files['frontend'] as $file)
+				{
 					$j20XML .= "\t\t\t<filename>".baseName($file)."</filename>\n";
 				}
+
 				$j20XML .= "\t\t</files>\n";
 			}
+
 			$j20XML .= "\t</fileset>\n</extension>";
 
 			// Add the manifest (J! 2.x)
@@ -258,16 +351,20 @@ ENDHEAD;
 			@unlink($tempXMLPath);
 
 			// Add back-end files to archives
-			if(array_key_exists('backend', $files)){
-				foreach($files['backend'] as $file) {
+			if (array_key_exists('backend', $files))
+			{
+				foreach ($files['backend'] as $file)
+				{
 					$zip20->add($file,
 						PCLZIP_OPT_ADD_PATH, 'backend' ,
 						PCLZIP_OPT_REMOVE_PATH, dirname($file) );
 				}
 			}
 			// Add front-end files to archives
-			if(array_key_exists('frontend', $files)){
-				foreach($files['frontend'] as $file) {
+			if (array_key_exists('frontend', $files))
+			{
+				foreach ($files['frontend'] as $file)
+				{
 					$zip20->add($file,
 						PCLZIP_OPT_ADD_PATH, 'frontend' ,
 						PCLZIP_OPT_REMOVE_PATH, dirname($file) );
@@ -279,7 +376,8 @@ ENDHEAD;
 
 			$parts = explode('-', $tag);
 			$country = strtolower($parts[1]);
-			if($tag == 'ca-ES') {
+			if ($tag == 'ca-ES')
+			{
 				$country = 'catalonia';
 			}
 

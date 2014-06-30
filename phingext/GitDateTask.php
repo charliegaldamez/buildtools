@@ -78,7 +78,10 @@ class GitDateTask extends SvnBaseTask
 	{
 		$this->setup('info');
 
-		if($this->workingCopy == '..') $this->workingCopy = '../';
+		if ($this->workingCopy == '..')
+		{
+			$this->workingCopy = '../';
+		}
 
 		exec('git log --format=%at -n1 '.escapeshellarg($this->workingCopy), $timestamp);
 		$date = date($this->format, trim($timestamp[0]));

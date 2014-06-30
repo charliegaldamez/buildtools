@@ -2,24 +2,28 @@
 require_once 'phing/Task.php';
 require_once dirname(__FILE__).'/LinkTask.php';
 
-if(stristr(php_uname(), 'windows')) {
+if (stristr(php_uname(), 'windows'))
+{
 	define('AKEEBA_RELINK_WINDOWS', 1);
 }
 
 function isLink($path)
 {
-	if(defined('AKEEBA_RELINK_WINDOWS')) {
+	if (defined('AKEEBA_RELINK_WINDOWS'))
+	{
 		return file_exists($path);
-	} else {
+	}
+	else
+	{
 		return is_link($path);
 	}
 }
 
 function symlink_dir($from, $to)
 {
-	if(is_dir($to))
+	if (is_dir($to))
 	{
-		if(AKEEBA_RELINK_WINDOWS)
+		if (AKEEBA_RELINK_WINDOWS)
 		{
 			$cmd = 'rmdir /s /q "'.$to.'"';
 		}
@@ -27,22 +31,26 @@ function symlink_dir($from, $to)
 		{
 			$cmd = 'rm -rf "'.$to.'"';
 		}
+
 		exec($cmd);
 	}
 
-	if(defined('AKEEBA_RELINK_WINDOWS')) {
+	if (defined('AKEEBA_RELINK_WINDOWS'))
+	{
 		$cmd = 'mklink /D "'.$to.'" "'.$from.'"';
 		exec($cmd);
-	} else {
+	}
+	else
+	{
 		@symlink($from, $to);
 	}
 }
 
 function symlink_file($from, $to)
 {
-	if(file_exists($to))
+	if (file_exists($to))
 	{
-		if(AKEEBA_RELINK_WINDOWS)
+		if (AKEEBA_RELINK_WINDOWS)
 		{
 			$cmd = 'del /f /q "'.$to.'"';
 		}
@@ -50,22 +58,26 @@ function symlink_file($from, $to)
 		{
 			$cmd = 'rm -f "'.$to.'"';
 		}
+
 		exec($cmd);
 	}
 
-	if(defined('AKEEBA_RELINK_WINDOWS')) {
+	if (defined('AKEEBA_RELINK_WINDOWS'))
+	{
 		$cmd = 'mklink "'.$to.'" "'.$from.'"';
 		exec($cmd);
-	} else {
+	}
+	else
+	{
 		@symlink($from, $to);
 	}
 }
 
 function hardlink_file($from, $to)
 {
-	if(file_exists($to))
+	if (file_exists($to))
 	{
-		if(AKEEBA_RELINK_WINDOWS)
+		if (AKEEBA_RELINK_WINDOWS)
 		{
 			$cmd = 'del /f /q "'.$to.'"';
 		}
@@ -73,22 +85,29 @@ function hardlink_file($from, $to)
 		{
 			$cmd = 'rm -f "'.$to.'"';
 		}
+
 		exec($cmd);
 	}
 
-	if(defined('AKEEBA_RELINK_WINDOWS')) {
+	if (defined('AKEEBA_RELINK_WINDOWS'))
+	{
 		$cmd = 'mklink /H "'.$to.'" "'.$from.'"';
 		exec($cmd);
-	} else {
+	}
+	else
+	{
 		@link($from, $to);
 	}
 }
 
 function realpath2($path)
 {
-	if(defined('AKEEBA_RELINK_WINDOWS')) {
+	if (defined('AKEEBA_RELINK_WINDOWS'))
+	{
 		return str_replace('/', '\\', $path);
-	} else {
+	}
+	else
+	{
 		return str_replace('\\', '/', $path);
 	}
 }
@@ -204,9 +223,12 @@ class LinkSiteTask extends LinkTask
 
 		// Set repository root path
 		$root = $this->getRoot();
-		if(empty($root)) {
+
+		if (empty($root))
+		{
 			$root = dirname(__FILE__) . '/../..';
 		}
+
 		$this->_root = $root;
 
 		// Detect the site's version
@@ -245,14 +267,20 @@ class LinkSiteTask extends LinkTask
 		$file16 = $this->_siteRoot.'/includes/version.php';
 		$file25Plus = $this->_siteRoot.'/libraries/cms/version/version.php';
 
-		if(@file_exists($file15))
+		if (@file_exists($file15))
 		{
 			$file = $file15;
-		} elseif(@file_exists($file16)) {
+		}
+		elseif (@file_exists($file16))
+		{
 			$file = $file16;
-		} elseif(@file_exists($file25Plus)) {
+		}
+		elseif (@file_exists($file25Plus))
+		{
 			$file = $file25Plus;
-		} else {
+		}
+		else
+		{
 			die('ERROR: Joomla! version.php not defined in _detectJoomlaVersion().');
 		}
 
@@ -294,12 +322,16 @@ class LinkSiteTask extends LinkTask
 	{
 		// Check if we have site/admin subdirectories, or just a bunch of modules
 		$scanPath = $this->_root.'/modules';
-		if( is_dir($scanPath.'/admin') || is_dir($scanPath.'/site') ) {
+
+		if (is_dir($scanPath.'/admin') || is_dir($scanPath.'/site') )
+		{
 			$paths = array(
 				$scanPath.'/admin',
 				$scanPath.'/site',
 			);
-		} else {
+		}
+		else
+		{
 			$paths = array(
 				$scanPath
 			);
@@ -307,17 +339,38 @@ class LinkSiteTask extends LinkTask
 
 		// Iterate directories
 		$this->_modules = array();
-		foreach($paths as $path) {
-			if( !is_dir($path) && !isLink($path) ) continue;
-			foreach(new DirectoryIterator($path) as $fileInfo) {
-				if($fileInfo->isDot()) continue;
-				if(!$fileInfo->isDir()) continue;
+
+		foreach ($paths as $path)
+		{
+			if (!is_dir($path) && !isLink($path))
+			{
+				continue;
+			}
+
+			foreach (new DirectoryIterator($path) as $fileInfo)
+			{
+				if ($fileInfo->isDot())
+				{
+					continue;
+				}
+
+				if (!$fileInfo->isDir())
+				{
+					continue;
+				}
 
 				$modPath = $path.'/'.$fileInfo->getFilename();
 				$info = $this->_scanModule($modPath);
 
-				if(!is_array($info)) continue;
-				if(!array_key_exists('module', $info)) continue;
+				if (!is_array($info))
+				{
+					continue;
+				}
+
+				if (!array_key_exists('module', $info))
+				{
+					continue;
+				}
 
 				$this->_modules[] = $info;
 			}
@@ -331,15 +384,28 @@ class LinkSiteTask extends LinkTask
 	{
 		// Check if we have site/admin subdirectories, or just a bunch of modules
 		$scanPath = $this->_root.'/plugins';
-		if( is_dir($scanPath.'/system') || is_dir($scanPath.'/content') || is_dir($scanPath.'/user') ) {
+
+		if (is_dir($scanPath.'/system') || is_dir($scanPath.'/content') || is_dir($scanPath.'/user'))
+		{
 			$paths = array();
-			foreach(new DirectoryIterator($scanPath) as $fileInfo) {
-				if($fileInfo->isDot()) continue;
-				if(!$fileInfo->isDir()) continue;
+
+			foreach (new DirectoryIterator($scanPath) as $fileInfo)
+			{
+				if ($fileInfo->isDot())
+				{
+					continue;
+				}
+
+				if (!$fileInfo->isDir())
+				{
+					continue;
+				}
 
 				$paths[] = $scanPath.'/'.$fileInfo->getFilename();
 			}
-		} else {
+		}
+		else
+		{
 			$paths = array(
 				$scanPath
 			);
@@ -347,17 +413,38 @@ class LinkSiteTask extends LinkTask
 
 		// Iterate directories
 		$this->_plugins = array();
-		foreach($paths as $path) {
-			if( !is_dir($path) && !isLink($path) ) continue;
-			foreach(new DirectoryIterator($path) as $fileInfo) {
-				if($fileInfo->isDot()) continue;
-				if(!$fileInfo->isDir()) continue;
+
+		foreach ($paths as $path)
+		{
+			if (!is_dir($path) && !isLink($path))
+			{
+				continue;
+			}
+
+			foreach (new DirectoryIterator($path) as $fileInfo)
+			{
+				if ($fileInfo->isDot())
+				{
+					continue;
+				}
+
+				if (!$fileInfo->isDir())
+				{
+					continue;
+				}
 
 				$plgPath = $path.'/'.$fileInfo->getFilename();
 				$info = $this->_scanPlugin($plgPath);
 
-				if(!is_array($info)) continue;
-				if(!array_key_exists('plugin', $info)) continue;
+				if (!is_array($info))
+				{
+					continue;
+				}
+
+				if (!array_key_exists('plugin', $info))
+				{
+					continue;
+				}
 
 				$this->_plugins[] = $info;
 			}
@@ -373,54 +460,87 @@ class LinkSiteTask extends LinkTask
 	private function _scanModule($path)
 	{
 		// Find the XML files
-		foreach(new DirectoryIterator($path) as $fileInfo) {
-			if($fileInfo->isDot()) continue;
-			if(!$fileInfo->isFile()) continue;
+		foreach (new DirectoryIterator($path) as $fileInfo)
+		{
+			if ($fileInfo->isDot())
+			{
+				continue;
+			}
+
+			if (!$fileInfo->isFile())
+			{
+				continue;
+			}
+
 			$fname = $fileInfo->getFilename();
-			if(substr($fname, -4) != '.xml') continue;
+
+			if (substr($fname, -4) != '.xml')
+			{
+				continue;
+			}
 
 			$xmlDoc = new DOMDocument;
 			$xmlDoc->load($path.'/'.$fname, LIBXML_NOBLANKS | LIBXML_NOCDATA | LIBXML_NOENT | LIBXML_NONET);
 
 			$rootNodes = $xmlDoc->getElementsByTagname('install');
 			$altRootNodes = $xmlDoc->getElementsByTagname('extension');
-			if($altRootNodes->length >= 1) {
+
+			if ($altRootNodes->length >= 1)
+			{
 				unset($rootNodes);
 				$rootNodes = $altRootNodes;
 			}
-			if($rootNodes->length < 1) {
+
+			if ($rootNodes->length < 1)
+			{
 				unset($xmlDoc);
 				continue;
 			}
 
 			$root = $rootNodes->item(0);
-			if(!$root->hasAttributes()) {
+
+			if (!$root->hasAttributes())
+			{
 				unset($xmlDoc);
 				continue;
 			}
-			if($root->getAttribute('type') != 'module') {
+
+			if ($root->getAttribute('type') != 'module')
+			{
 				unset($xmlDoc);
 				continue;
 			}
 
 			$module = '';
 			$files = $xmlDoc->getElementsByTagName('files')->item(0)->childNodes;
-			foreach($files as $file) {
-				if($file->hasAttributes()) {
+
+			foreach ($files as $file)
+			{
+				if ($file->hasAttributes())
+				{
 					$module = $file->getAttribute('module');
 				}
 			}
 
 			// Get the languages
-			if($xmlDoc->getElementsByTagName('languages')->length < 1) {
+			if ($xmlDoc->getElementsByTagName('languages')->length < 1)
+			{
 				$langFolder = null;
 				$langFiles = array();
-			} else {
+			}
+			else
+			{
 				$langTag = $xmlDoc->getElementsByTagName('languages')->item(0);
 				$langFolder = $path.'/'.$langTag->getAttribute('folder');
 				$langFiles = array();
-				foreach($langTag->childNodes as $langFile) {
-					if(!($langFile instanceof DOMElement)) continue;
+
+				foreach ($langTag->childNodes as $langFile)
+				{
+					if (!($langFile instanceof DOMElement))
+					{
+						continue;
+					}
+
 					$tag = $langFile->getAttribute('tag');
 					$lfPath = $langFolder.'/'.$langFile->textContent;
 					$langFiles[$tag][] = $lfPath;
@@ -432,13 +552,16 @@ class LinkSiteTask extends LinkTask
 			$mediaDestination = null;
 			$mediaPath = null;
 			$allMediaTags = $xmlDoc->getElementsByTagName('media');
-			if($allMediaTags->length >= 1) {
+
+			if ($allMediaTags->length >= 1)
+			{
 				$mediaFolder = $allMediaTags->item(0)->getAttribute('folder');
 				$mediaDestination = $allMediaTags->item(0)->getAttribute('destination');
 				$mediaPath = $path.'/'.$mediaFolder;
 			}
 
-			if(empty($module)) {
+			if (empty($module))
+			{
 				unset($xmlDoc);
 				continue;
 			}
@@ -468,32 +591,53 @@ class LinkSiteTask extends LinkTask
 	private function _scanPlugin($path)
 	{
 		// Find the XML files
-		foreach(new DirectoryIterator($path) as $fileInfo) {
-			if($fileInfo->isDot()) continue;
-			if(!$fileInfo->isFile()) continue;
+		foreach (new DirectoryIterator($path) as $fileInfo)
+		{
+			if ($fileInfo->isDot())
+			{
+				continue;
+			}
+
+			if (!$fileInfo->isFile())
+			{
+				continue;
+			}
+
 			$fname = $fileInfo->getFilename();
-			if(substr($fname, -4) != '.xml') continue;
+
+			if (substr($fname, -4) != '.xml')
+			{
+				continue;
+			}
 
 			$xmlDoc = new DOMDocument;
 			$xmlDoc->load($path.'/'.$fname, LIBXML_NOBLANKS | LIBXML_NOCDATA | LIBXML_NOENT | LIBXML_NONET);
 
 			$rootNodes = $xmlDoc->getElementsByTagname('install');
 			$altRootNodes = $xmlDoc->getElementsByTagname('extension');
-			if($altRootNodes->length >= 1) {
+
+			if ($altRootNodes->length >= 1)
+			{
 				unset($rootNodes);
 				$rootNodes = $altRootNodes;
 			}
-			if($rootNodes->length < 1) {
+
+			if ($rootNodes->length < 1)
+			{
 				unset($xmlDoc);
 				continue;
 			}
 
 			$root = $rootNodes->item(0);
-			if(!$root->hasAttributes()) {
+
+			if (!$root->hasAttributes())
+			{
 				unset($xmlDoc);
 				continue;
 			}
-			if($root->getAttribute('type') != 'plugin') {
+
+			if ($root->getAttribute('type') != 'plugin')
+			{
 				unset($xmlDoc);
 				continue;
 			}
@@ -502,22 +646,34 @@ class LinkSiteTask extends LinkTask
 
 			$plugin = '';
 			$files = $xmlDoc->getElementsByTagName('files')->item(0)->childNodes;
-			foreach($files as $file) {
-				if($file->hasAttributes()) {
+
+			foreach ($files as $file)
+			{
+				if ($file->hasAttributes())
+				{
 					$plugin = $file->getAttribute('plugin');
 				}
 			}
 
 			// Get the languages
-			if($xmlDoc->getElementsByTagName('languages')->length < 1) {
+			if ($xmlDoc->getElementsByTagName('languages')->length < 1)
+			{
 				$langFolder = null;
 				$langFiles = array();
-			} else {
+			}
+			else
+			{
 				$langTag = $xmlDoc->getElementsByTagName('languages')->item(0);
 				$langFolder = $path.'/'.$langTag->getAttribute('folder');
 				$langFiles = array();
-				foreach($langTag->childNodes as $langFile) {
-					if(!($langFile instanceof DOMElement)) continue;
+
+				foreach ($langTag->childNodes as $langFile)
+				{
+					if (!($langFile instanceof DOMElement))
+					{
+						continue;
+					}
+
 					$tag = $langFile->getAttribute('tag');
 					$lfPath = $langFolder.'/'.$langFile->textContent;
 					$langFiles[$tag][] = $lfPath;
@@ -529,13 +685,16 @@ class LinkSiteTask extends LinkTask
 			$mediaDestination = null;
 			$mediaPath = null;
 			$allMediaTags = $xmlDoc->getElementsByTagName('media');
-			if($allMediaTags->length >= 1) {
+
+			if ($allMediaTags->length >= 1)
+			{
 				$mediaFolder = $allMediaTags->item(0)->getAttribute('folder');
 				$mediaDestination = $allMediaTags->item(0)->getAttribute('destination');
 				$mediaPath = $path.'/'.$mediaFolder;
 			}
 
-			if(empty($plugin)) {
+			if (empty($plugin))
+			{
 				unset($xmlDoc);
 				continue;
 			}
@@ -581,67 +740,107 @@ class LinkSiteTask extends LinkTask
 		}
 
 		// Find the XML files
-		foreach(new DirectoryIterator($path) as $fileInfo) {
-			if($fileInfo->isDot()) continue;
-			if(!$fileInfo->isFile()) continue;
+		foreach (new DirectoryIterator($path) as $fileInfo)
+		{
+			if ($fileInfo->isDot())
+			{
+				continue;
+			}
+
+			if (!$fileInfo->isFile())
+			{
+				continue;
+			}
+
 			$fname = $fileInfo->getFilename();
-			if(substr($fname, -4) != '.xml') continue;
+
+			if (substr($fname, -4) != '.xml')
+			{
+				continue;
+			}
 
 			$xmlDoc = new DOMDocument;
 			$xmlDoc->load($path.'/'.$fname, LIBXML_NOBLANKS | LIBXML_NOCDATA | LIBXML_NOENT | LIBXML_NONET);
 
 			$rootNodes = $xmlDoc->getElementsByTagname('install');
 			$altRootNodes = $xmlDoc->getElementsByTagname('extension');
-			if($altRootNodes->length >= 1) {
+
+			if ($altRootNodes->length >= 1)
+			{
 				unset($rootNodes);
 				$rootNodes = $altRootNodes;
 			}
-			if($rootNodes->length < 1) {
+
+			if ($rootNodes->length < 1)
+			{
 				unset($xmlDoc);
 				continue;
 			}
 
 			$root = $rootNodes->item(0);
-			if(!$root->hasAttributes()) {
+
+			if (!$root->hasAttributes())
+			{
 				unset($xmlDoc);
 				continue;
 			}
-			if($root->getAttribute('type') != 'component') {
+
+			if ($root->getAttribute('type') != 'component')
+			{
 				unset($xmlDoc);
 				continue;
 			}
 
 			// Get the component name
 			$component = strtolower($xmlDoc->getElementsByTagName('name')->item(0)->textContent);
-			if(substr($component,0,4) != 'com_') $component = 'com_'.$component;
+
+			if (substr($component,0,4) != 'com_')
+			{
+				$component = 'com_'.$component;
+			}
 
 			// Get the <files> tags for front and back-end
 			$siteFolder = $path;
 			$allFilesTags = $xmlDoc->getElementsByTagName('files');
 			$nodePath0 = $allFilesTags->item(0)->getNodePath();
 			$nodePath1 = $allFilesTags->item(1)->getNodePath();
-			if(in_array($nodePath0, array('/install/files','/extension/files'))) {
+
+			if (in_array($nodePath0, array('/install/files','/extension/files')))
+			{
 				$siteFilesTag = $allFilesTags->item(0);
 				$adminFilesTag = $allFilesTags->item(1);
-			} else {
+			}
+			else
+			{
 				$siteFilesTag = $allFilesTags->item(1);
 				$adminFilesTag = $allFilesTags->item(0);
 			}
 
 			// Get the site and admin folders
-			if($siteFilesTag->hasAttribute('folder')) $siteFolder = $path.'/'.$siteFilesTag->getAttribute('folder');
-			if($adminFilesTag->hasAttribute('folder')) $adminFolder = $path.'/'.$adminFilesTag->getAttribute('folder');
+			if ($siteFilesTag->hasAttribute('folder'))
+			{
+				$siteFolder = $path.'/'.$siteFilesTag->getAttribute('folder');
+			}
+
+			if ($adminFilesTag->hasAttribute('folder'))
+			{
+				$adminFolder = $path.'/'.$adminFilesTag->getAttribute('folder');
+			}
 
 			// Get the media folder
 			$mediaFolder = null;
 			$allMediaTags = $xmlDoc->getElementsByTagName('media');
-			if($allMediaTags->length >= 1) {
+
+			if ($allMediaTags->length >= 1)
+			{
 				$mediaFolder = $path.'/'.$allMediaTags->item(0)->getAttribute('folder');
 			}
 
 			// Do we have a CLI folder
 			$cliFolder = $path.'/cli';
-			if(!is_dir($cliFolder)) {
+
+			if (!is_dir($cliFolder))
+			{
 				$cliFolder = '';
 			}
 
@@ -657,62 +856,88 @@ class LinkSiteTask extends LinkTask
 			$langFilesAdmin    = array();
 
 			// Do I have any language tag defined in the "old" way?
-			if($allLanguagesTags->item(0))
+			if ($allLanguagesTags->item(0))
 			{
 				$nodePath0 = $allLanguagesTags->item(0)->getNodePath();
 
-				if($allLanguagesTags->item(1))
+				if ($allLanguagesTags->item(1))
 				{
 					$nodePath1 = $allLanguagesTags->item(1)->getNodePath();
 				}
 
-				if(in_array($nodePath0, array('/install/languages','/extension/languages'))) {
+				if (in_array($nodePath0, array('/install/languages','/extension/languages'))) {
 					$siteLanguagesTag = $allLanguagesTags->item(0);
-					if($nodePath1)
+
+					if ($nodePath1)
 					{
 						$adminLanguagesTag = $allLanguagesTags->item(1);
 					}
 
-				} else {
+				}
+				else
+				{
 					$adminLanguagesTag = $allLanguagesTags->item(0);
 
-					if($nodePath1)
+					if ($nodePath1)
 					{
 						$siteLanguagesTag = $allLanguagesTags->item(1);
 					}
 				}
 
 				// Get the site and admin language folders
-				if($siteLanguagesTag)
+				if ($siteLanguagesTag)
 				{
-					if($siteLanguagesTag->hasAttribute('folder')) $langFolderSite = $path.'/'.$siteLanguagesTag->getAttribute('folder');
+					if ($siteLanguagesTag->hasAttribute('folder'))
+					{
+						$langFolderSite = $path.'/'.$siteLanguagesTag->getAttribute('folder');
+					}
 				}
 
-				if($adminLanguagesTag)
+				if ($adminLanguagesTag)
 				{
-					if($adminLanguagesTag->hasAttribute('folder')) $langFolderAdmin = $path.'/'.$adminLanguagesTag->getAttribute('folder');
+					if ($adminLanguagesTag->hasAttribute('folder'))
+					{
+						$langFolderAdmin = $path.'/'.$adminLanguagesTag->getAttribute('folder');
+					}
 				}
 
 				// Get the frontend languages
 				$langFilesSite = array();
-				if($siteLanguagesTag && $siteLanguagesTag->hasChildNodes()) foreach($siteLanguagesTag->childNodes as $langFile)
+
+				if ($siteLanguagesTag && $siteLanguagesTag->hasChildNodes())
 				{
-					if(!($langFile instanceof DOMElement)) continue;
-					$tag = $langFile->getAttribute('tag');
-					$langFilesSite[$tag][] = $langFolderSite.'/'.$langFile->textContent;
+					foreach ($siteLanguagesTag->childNodes as $langFile)
+					{
+						if (!($langFile instanceof DOMElement))
+						{
+							continue;
+						}
+
+						$tag = $langFile->getAttribute('tag');
+						$langFilesSite[$tag][] = $langFolderSite.'/'.$langFile->textContent;
+					}
 				}
 
 				// Get the backend languages
 				$langFilesAdmin = array();
-				if($adminLanguagesTag && $adminLanguagesTag->hasChildNodes()) foreach($adminLanguagesTag->childNodes as $langFile)
+
+				if ($adminLanguagesTag && $adminLanguagesTag->hasChildNodes())
 				{
-					if(!($langFile instanceof DOMElement)) continue;
-					$tag = $langFile->getAttribute('tag');
-					$langFilesAdmin[$tag][] = $langFolderAdmin.'/'.$langFile->textContent;
+					foreach ($adminLanguagesTag->childNodes as $langFile)
+					{
+						if (!($langFile instanceof DOMElement))
+						{
+							continue;
+						}
+
+						$tag = $langFile->getAttribute('tag');
+						$langFilesAdmin[$tag][] = $langFolderAdmin.'/'.$langFile->textContent;
+					}
 				}
 			}
 
-			if(empty($component)) {
+			if (empty($component))
+			{
 				unset($xmlDoc);
 				continue;
 			}
@@ -730,6 +955,7 @@ class LinkSiteTask extends LinkTask
 			);
 
 			unset($xmlDoc);
+
 			return;
 		}
 	}
@@ -741,23 +967,41 @@ class LinkSiteTask extends LinkTask
 	private function _mapComponent()
 	{
 		$files = array();
+
 		// Frontend and backend directories
 		$dirs = array(
 			$this->_component['siteFolder']  => $this->_siteRoot.'/components/'.$this->_component['component'],
 			$this->_component['adminFolder'] => $this->_siteRoot.'/administrator/components/'.$this->_component['component'],
 		);
+
 		// Media directory
-		if($this->_component['mediaFolder']) {
+		if ($this->_component['mediaFolder'])
+		{
 			$dirs[$this->_component['mediaFolder']] =
 				$this->_siteRoot.'/media/'.$this->_component['component'];
 		}
+
 		// CLI files
-		if($this->_component['cliFolder']) {
-			foreach(new DirectoryIterator($this->_component['cliFolder']) as $fileInfo) {
-				if($fileInfo->isDot()) continue;
-				if(!$fileInfo->isFile()) continue;
+		if ($this->_component['cliFolder'])
+		{
+			foreach (new DirectoryIterator($this->_component['cliFolder']) as $fileInfo)
+			{
+				if ($fileInfo->isDot())
+				{
+					continue;
+				}
+
+				if (!$fileInfo->isFile())
+				{
+					continue;
+				}
+
 				$fname = $fileInfo->getFileName();
-				if(substr($fname, -4) != '.php') continue;
+
+				if (substr($fname, -4) != '.php')
+				{
+					continue;
+				}
 
 				$files[$this->_component['cliFolder'].'/'.$fname] =
 					$this->_siteRoot.'/cli/'.$fname;
@@ -766,10 +1010,15 @@ class LinkSiteTask extends LinkTask
 
 		// Front-end language files
 		$basePath = $this->_siteRoot.'/language/';
-		if(!empty($this->_component['siteLangFiles'])) {
-			foreach($this->_component['siteLangFiles'] as $tag => $lfiles) {
+
+		if (!empty($this->_component['siteLangFiles']))
+		{
+			foreach ($this->_component['siteLangFiles'] as $tag => $lfiles)
+			{
 				$path = $basePath.$tag.'/';
-				foreach($lfiles as $lfile) {
+
+				foreach ($lfiles as $lfile)
+				{
 					$files[$lfile] = $path.basename($lfile);
 				}
 			}
@@ -777,10 +1026,15 @@ class LinkSiteTask extends LinkTask
 
 		// Back-end language files
 		$basePath = $this->_siteRoot.'/administrator/language/';
-		if(!empty($this->_component['adminLangFiles'])) {
-			foreach($this->_component['adminLangFiles'] as $tag => $lfiles) {
+
+		if (!empty($this->_component['adminLangFiles']))
+		{
+			foreach ($this->_component['adminLangFiles'] as $tag => $lfiles)
+			{
 				$path = $basePath.$tag.'/';
-				foreach($lfiles as $lfile) {
+
+				foreach ($lfiles as $lfile)
+				{
 					$files[$lfile] = $path.basename($lfile);
 				}
 			}
@@ -798,28 +1052,42 @@ class LinkSiteTask extends LinkTask
 		$dirs = array();
 
 		$basePath = $this->_siteRoot.'/';
-		if($module['client'] != 'site') $basePath .= 'administrator/';
+
+		if ($module['client'] != 'site')
+		{
+			$basePath .= 'administrator/';
+		}
+
 		$basePath .= 'modules/'.$module['module'];
 
 		$dirs[$module['path']] = $basePath;
 
 		// Language files
-		if($module['client'] != 'site') {
+		if ($module['client'] != 'site')
+		{
 			$basePath = $this->_siteRoot.'/administrator/language/';
-		} else {
+		}
+		else
+		{
 			$basePath = $this->_siteRoot.'/language/';
 		}
-		if(!empty($module['langFiles'])) {
-			foreach($module['langFiles'] as $tag => $lfiles) {
+
+		if (!empty($module['langFiles']))
+		{
+			foreach ($module['langFiles'] as $tag => $lfiles)
+			{
 				$path = $basePath.$tag.'/';
-				foreach($lfiles as $lfile) {
+
+				foreach ($lfiles as $lfile)
+				{
 					$files[$lfile] = $path.basename($lfile);
 				}
 			}
 		}
 
 		// Media directory
-		if($module['mediaPath']) {
+		if ($module['mediaPath'])
+		{
 			$dirs[$module['mediaPath']] = $this->_siteRoot.'/'.$module['mediaFolder'].'/'.$module['mediaDestination'];
 		}
 
@@ -834,19 +1102,31 @@ class LinkSiteTask extends LinkTask
 		$files = array();
 		$dirs = array();
 
-		if(version_compare($this->_joomlaVersion, '1.6.0', 'ge')) {
+		if (version_compare($this->_joomlaVersion, '1.6.0', 'ge'))
+		{
 			// Joomla! 1.6 or later -- just link one folder
 			$basePath = $this->_siteRoot.'/plugins/'.$plugin['folder'].'/'.$plugin['plugin'];
 			$dirs[$plugin['path']] = $basePath;
-		} else {
+		}
+		else
+		{
 			// Joomla! 1.5 -- we've got to scan for files and directories
 			$basePath = $this->_siteRoot.'/plugins/'.$plugin['folder'].'/';
-			foreach(new DirectoryIterator($plugin['path']) as $fileInfo) {
-				if($fileInfo->isDot()) continue;
+			foreach (new DirectoryIterator($plugin['path']) as $fileInfo)
+			{
+				if ($fileInfo->isDot())
+				{
+					continue;
+				}
+
 				$fname = $fileInfo->getFileName();
-				if($fileInfo->isDir()) {
+
+				if ($fileInfo->isDir())
+				{
 					$dirs[$plugin['path'].'/'.$fname] = $basePath.$fname;
-				} elseif($fileInfo->isFile()) {
+				}
+				elseif ($fileInfo->isFile())
+				{
 					$dirs[$plugin['path'].'/'.$fname] = $basePath.$fname;
 				}
 			}
@@ -854,17 +1134,23 @@ class LinkSiteTask extends LinkTask
 
 		// Language files
 		$basePath = $this->_siteRoot.'/administrator/language/';
-		if(!empty($plugin['langFiles'])) {
-			foreach($plugin['langFiles'] as $tag => $lfiles) {
+
+		if (!empty($plugin['langFiles']))
+		{
+			foreach ($plugin['langFiles'] as $tag => $lfiles)
+			{
 				$path = $basePath.$tag.'/';
-				foreach($lfiles as $lfile) {
+
+				foreach ($lfiles as $lfile)
+				{
 					$files[$lfile] = $path.basename($lfile);
 				}
 			}
 		}
 
 		// Media directory
-		if($plugin['mediaPath']) {
+		if ($plugin['mediaPath'])
+		{
 			$dirs[$plugin['mediaPath']] = $this->_siteRoot.'/'.$plugin['mediaFolder'].'/'.$plugin['mediaDestination'];
 		}
 
@@ -895,7 +1181,11 @@ class LinkSiteTask extends LinkTask
 		$files = array_values($files);
 
 		$this->_unlinkDirectories($dirs);
-		if(!empty($files)) $this->_unlinkFiles($files);
+
+		if (!empty($files))
+		{
+			$this->_unlinkFiles($files);
+		}
 	}
 
 	/**
@@ -903,8 +1193,12 @@ class LinkSiteTask extends LinkTask
 	 */
 	public function unlinkModules()
 	{
-		if(empty($this->_modules)) return;
-		foreach($this->_modules as $module)
+		if (empty($this->_modules))
+		{
+			return;
+		}
+
+		foreach ($this->_modules as $module)
 		{
 			$this->log("Unlinking module ".$module['module'].' ('.$module['client'].")", Project::MSG_INFO);
 
@@ -918,7 +1212,11 @@ class LinkSiteTask extends LinkTask
 			$files = array_values($files);
 
 			$this->_unlinkDirectories($dirs);
-			if(!empty($files)) $this->_unlinkFiles($files);
+
+			if (!empty($files))
+			{
+				$this->_unlinkFiles($files);
+			}
 		}
 	}
 
@@ -927,8 +1225,12 @@ class LinkSiteTask extends LinkTask
 	 */
 	public function unlinkPlugins()
 	{
-		if(empty($this->_plugins)) return;
-		foreach($this->_plugins as $plugin)
+		if (empty($this->_plugins))
+		{
+			return;
+		}
+
+		foreach ($this->_plugins as $plugin)
 		{
 	 	  	$this->log("Unlinking plugin ".$plugin['plugin'].' ('.$plugin['folder'].")", Project::MSG_INFO);
 
@@ -942,7 +1244,11 @@ class LinkSiteTask extends LinkTask
 			$files = array_values($files);
 
 			$this->_unlinkDirectories($dirs);
-			if(!empty($files)) $this->_unlinkFiles($files);
+
+			if (!empty($files))
+			{
+				$this->_unlinkFiles($files);
+			}
 		}
 	}
 
@@ -964,12 +1270,12 @@ class LinkSiteTask extends LinkTask
 		$map = $this->_mapComponent();
 		extract($map);
 
-		foreach($dirs as $from => $to)
+		foreach ($dirs as $from => $to)
 		{
 			symlink_dir(realpath2($from), realpath2($to));
 		}
 
-		foreach($files as $from => $to)
+		foreach ($files as $from => $to)
 		{
 			symlink_file(realpath2($from), realpath2($to));
 		}
@@ -980,8 +1286,12 @@ class LinkSiteTask extends LinkTask
 	 */
 	public function linkModules()
 	{
-		if(empty($this->_modules)) return;
-		foreach($this->_modules as $module)
+		if (empty($this->_modules))
+		{
+			return;
+		}
+
+		foreach ($this->_modules as $module)
 		{
 			$this->log("Linking module ".$module['module'].' ('.$module['client'], Project::MSG_INFO);
 
@@ -991,12 +1301,12 @@ class LinkSiteTask extends LinkTask
 			$map = $this->_mapModule($module);
 			extract($map);
 
-			foreach($dirs as $from => $to)
+			foreach ($dirs as $from => $to)
 			{
 				symlink_dir(realpath2($from), realpath2($to));
 			}
 
-			foreach($files as $from => $to)
+			foreach ($files as $from => $to)
 			{
 				symlink_file(realpath2($from), realpath2($to));
 			}
@@ -1008,8 +1318,12 @@ class LinkSiteTask extends LinkTask
 	 */
 	public function linkPlugins()
 	{
-		if(empty($this->_plugins)) return;
-		foreach($this->_plugins as $plugin)
+		if (empty($this->_plugins))
+		{
+			return;
+		}
+
+		foreach ($this->_plugins as $plugin)
 		{
 			$this->log("Linking plugin ".$plugin['plugin'].' ('.$plugin['folder'].")", Project::MSG_INFO);
 
@@ -1019,12 +1333,12 @@ class LinkSiteTask extends LinkTask
 			$map = $this->_mapPlugin($plugin);
 			extract($map);
 
-			foreach($dirs as $from => $to)
+			foreach ($dirs as $from => $to)
 			{
 				symlink_dir(realpath2($from), realpath2($to));
 			}
 
-			foreach($files as $from => $to)
+			foreach ($files as $from => $to)
 			{
 				symlink_file(realpath2($from), realpath2($to));
 			}
@@ -1038,16 +1352,27 @@ class LinkSiteTask extends LinkTask
 	 */
 	private function _unlinkDirectories($dirs)
 	{
-		foreach($dirs as $dir) {
-			if(isLink($dir)) {
+		foreach ($dirs as $dir)
+		{
+			if (isLink($dir))
+			{
 				$result = unlink(realpath2($dir));
-			} elseif(is_dir($dir)) {
+			}
+			elseif (is_dir($dir))
+			{
 				$result = $this->_rmrecursive($dir);
-			} else {
+			}
+			else
+			{
 				$result = true;
 			}
-			if($result === false) return $result;
+
+			if ($result === false)
+			{
+				return $result;
+			}
 		}
+
 		return $result;
 	}
 
@@ -1058,14 +1383,23 @@ class LinkSiteTask extends LinkTask
 	 */
 	private function _unlinkFiles($files)
 	{
-		foreach($files as $file) {
-			if(isLink($file) || is_file($file)) {
+		foreach ($files as $file)
+		{
+			if (isLink($file) || is_file($file))
+			{
 				$result = unlink(realpath2($file));
-			} else {
+			}
+			else
+			{
 				$result = true;
 			}
-			if($result === false) return $result;
+
+			if ($result === false)
+			{
+				return $result;
+			}
 		}
+
 		return $result;
 	}
 
@@ -1078,29 +1412,48 @@ class LinkSiteTask extends LinkTask
 	{
 		// When the directory is a symlink, don't delete recursively. That would
 		// fuck up the plugins.
-		if(isLink($dir)) {
+		if (isLink($dir))
+		{
 			return @unlink(realpath2($dir));
 		}
 
 		$handle = opendir($dir);
-		while( false != ($item = readdir($handle))) {
-			if( !in_array($item, array('.','..')) ) {
+
+		while(false != ($item = readdir($handle)))
+		{
+			if (!in_array($item, array('.','..')) )
+			{
 				$path = $dir.'/'.$item;
-				if(isLink($path)) {
-					$result = @unlink(realpath2($path));
-				} elseif(is_file($path)) {
-					$result = @unlink(realpath2($path));
-				} elseif(is_dir($path)) {
-					$result = $this->_rmrecursive(realpath2($path));
-				} else {
+
+				if (isLink($path))
+				{
 					$result = @unlink(realpath2($path));
 				}
-				if(!$result) return false;
+				elseif (is_file($path))
+				{
+					$result = @unlink(realpath2($path));
+				}
+				elseif (is_dir($path))
+				{
+					$result = $this->_rmrecursive(realpath2($path));
+				}
+				else
+				{
+					$result = @unlink(realpath2($path));
+				}
+
+				if (!$result)
+				{
+					return false;
+				}
 			}
 		}
 		closedir($handle);
 
-		if(!rmdir($dir)) return false;
+		if (!rmdir($dir))
+		{
+			return false;
+		}
 
 		return true;
 	}
