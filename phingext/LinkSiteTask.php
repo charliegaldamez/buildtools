@@ -1,4 +1,10 @@
 <?php
+/**
+ * This file is copied verbatim from Akeeba Build Tools.
+ *
+ * @link	https://github.com/akeeba/buildfiles
+ */
+
 require_once 'phing/Task.php';
 require_once dirname(__FILE__) . '/LinkTask.php';
 
