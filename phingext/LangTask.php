@@ -293,7 +293,7 @@ class LangTask extends Task
 			// Get paths to temp and output files
 			@mkdir(realpath(dirname(__FILE__).'/../..').'/release/languages');
 			$j20ZIPPath = dirname(__FILE__).'/../../release/languages/'.$packageName.'-'.$tag.'.zip';
-			$tempXMLPath = realpath(dirname(__FILE__).'/../..').'/release/'.$tag.'.xml';
+			$tempXMLPath = realpath(dirname(__FILE__).'/../..') . '/release/' . $packageName . '-' . $tag . '.xml';
 
 			// Start new ZIP files
 			@unlink($j20ZIPPath);
